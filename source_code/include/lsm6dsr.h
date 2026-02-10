@@ -12,7 +12,7 @@
 #include "motors.h"
 #include "setup.h"
 
-#define GYRO_DATA_LENGTH 2
+#define GYRO_DATA_LENGTH 1
 
 void lsm6dsr_init(void);
 uint8_t lsm6dsr_who_am_i(void);

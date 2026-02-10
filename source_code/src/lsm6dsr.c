@@ -129,20 +129,16 @@ void lsm6dsr_gyro_z_calibration(void) {
   offset_z = sum_z / 1000.0f;
   printf("Offset Z: %.4f\n", offset_z);
 
-  int16_t eeprom_data[2] = {offset_z >= 0 ? 1 : 0, (int16_t)(abs(offset_z * 5000))};
-  eeprom_set_data(DATA_INDEX_GYRO_Z, eeprom_data, 2);
+  int16_t eeprom_data[GYRO_DATA_LENGTH] = {(int16_t)(offset_z * 5000)};
+  eeprom_set_data(DATA_INDEX_GYRO_Z, eeprom_data, GYRO_DATA_LENGTH);
 
-  
   delay(100);
   mpu_updating = true;
 }
 
 void lsm6dsr_load_eeprom(void) {
   int16_t *eeprom_data = eeprom_get_data();
-  offset_z = eeprom_data[DATA_INDEX_GYRO_Z + 1] / 5000.0f;
-  if (eeprom_data[DATA_INDEX_GYRO_Z] == 0) {
-    offset_z = -offset_z;
-  }
+  offset_z = eeprom_data[DATA_INDEX_GYRO_Z] / 5000.0f;
   printf("Offset Z: %.4f\n", offset_z);
   mpu_updating = true;
 }
