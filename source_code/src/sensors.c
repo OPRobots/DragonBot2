@@ -65,9 +65,9 @@ uint16_t get_line_sensor_calibrated(uint8_t index) {
 
     switch (menu_run_get_sensors_mode()) {
       case SENSORS_ANALOG:
-        if (sensor_value < (line_sensors_min[index] + (line_sensors_max[index] - line_sensors_min[index]) * ANALOG_SENSORS_MIN_PERCENT)) {
+        if (sensor_value < (line_sensors_min[index] + (line_sensors_max[index] - line_sensors_min[index]) * SENSORS_ANALOG_MIN_PERCENT)) {
           sensor_value = LINE_SENSOR_MIN_VALUE;
-        } else if (sensor_value > (line_sensors_min[index] + (line_sensors_max[index] - line_sensors_min[index]) * ANALOG_SENSORS_MAX_PERCENT)) {
+        } else if (sensor_value > (line_sensors_min[index] + (line_sensors_max[index] - line_sensors_min[index]) * SENSORS_ANALOG_MAX_PERCENT)) {
           sensor_value = LINE_SENSOR_MAX_VALUE;
         }
         break;
@@ -116,9 +116,9 @@ uint16_t get_mark_sensor_calibrated(uint8_t index) {
 
     switch (menu_run_get_sensors_mode()) {
       case SENSORS_ANALOG:
-        if (sensor_value < (mark_sensors_min[index] + (mark_sensors_max[index] - mark_sensors_min[index]) * ANALOG_SENSORS_MIN_PERCENT)) {
+        if (sensor_value < (mark_sensors_min[index] + (mark_sensors_max[index] - mark_sensors_min[index]) * SENSORS_ANALOG_MIN_PERCENT)) {
           sensor_value = LINE_SENSOR_MIN_VALUE;
-        } else if (sensor_value > (mark_sensors_min[index] + (mark_sensors_max[index] - mark_sensors_min[index]) * ANALOG_SENSORS_MAX_PERCENT)) {
+        } else if (sensor_value > (mark_sensors_min[index] + (mark_sensors_max[index] - mark_sensors_min[index]) * SENSORS_ANALOG_MAX_PERCENT)) {
           sensor_value = LINE_SENSOR_MAX_VALUE;
         }
         break;
@@ -157,52 +157,117 @@ void sensors_calibration(void) {
 
   if (use_eeprom_calibration) {
     set_status_led(true);
-    bool sensors_min_checked[get_line_sensor_count()];
-    bool sensors_max_checked[get_line_sensor_count()];
+    bool line_sensors_min_checked[get_line_sensor_count()];
+    bool line_sensors_max_checked[get_line_sensor_count()];
     for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
-      sensors_min_checked[sensor] = false;
-      sensors_max_checked[sensor] = false;
+      line_sensors_min_checked[sensor] = false;
+      line_sensors_max_checked[sensor] = false;
     }
 
-    uint8_t sensors_checked_count = 0;
+    bool mark_sensors_min_checked[get_mark_sensor_count()];
+    bool mark_sensors_max_checked[get_mark_sensor_count()];
+    for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+      mark_sensors_min_checked[sensor] = false;
+      mark_sensors_max_checked[sensor] = false;
+    }
+
     uint32_t sensors_checked_last_ms = 0;
-    while (!is_right_wheel_click_up() && (sensors_checked_count < get_line_sensor_count() || get_clock_ticks() - sensors_checked_last_ms < 500)) {
+    uint8_t line_sensors_checked_count = 0;
+    uint8_t mark_sensors_checked_count = 0;
+
+    uint32_t ms_inicio = get_clock_ticks();
+    while (ms_inicio + LINE_CALIBRATION_MS >= get_clock_ticks()) {
+      if (get_clock_ticks() - sensors_checked_last_ms < 50) {
+        continue;
+      }
       for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
         if (abs(get_line_sensor_raw(sensor) - line_sensors_min[sensor]) < 250) {
-          sensors_min_checked[sensor] = true;
+          line_sensors_min_checked[sensor] = true;
         }
-        if (abs(get_line_sensor_raw(sensor) - line_sensors_max[sensor]) < 250 && sensors_min_checked[sensor]) {
-          sensors_max_checked[sensor] = true;
+        if (abs(get_line_sensor_raw(sensor) - line_sensors_max[sensor]) < 250 && line_sensors_min_checked[sensor]) {
+          line_sensors_max_checked[sensor] = true;
         }
       }
-
-      sensors_checked_count = 0;
+      line_sensors_checked_count = 0;
       for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
-        if (sensors_min_checked[sensor] && sensors_max_checked[sensor]) {
-          sensors_checked_count++;
+        if (line_sensors_min_checked[sensor] && line_sensors_max_checked[sensor]) {
+          line_sensors_checked_count++;
         }
       }
 
-      if (sensors_checked_count == 0) {
+      for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+        if (abs(get_mark_sensor_raw(sensor) - mark_sensors_min[sensor]) < 250) {
+          mark_sensors_min_checked[sensor] = true;
+        }
+        if (abs(get_mark_sensor_raw(sensor) - mark_sensors_max[sensor]) < 250 && mark_sensors_min_checked[sensor]) {
+          mark_sensors_max_checked[sensor] = true;
+        }
+      }
+
+      if (line_sensors_checked_count == 0) {
         set_RGB_color(125, 0, 0);
-      } else if (sensors_checked_count < get_line_sensor_count()) {
+      } else if (line_sensors_checked_count < get_line_sensor_count()) {
         set_RGB_color(125, 125, 0);
       } else {
         set_RGB_color(0, 125, 0);
-        if (sensors_checked_last_ms == 0) {
-          sensors_checked_last_ms = get_clock_ticks();
+      }
+
+      mark_sensors_checked_count = 0;
+      for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+        bool sensor_ok = mark_sensors_min_checked[sensor] && mark_sensors_max_checked[sensor];
+        if (sensor_ok) {
+          mark_sensors_checked_count++;
+        }
+        switch (sensor) {
+          case 0:
+            set_info_led(INFO_LED_2, sensor_ok);
+            break;
+          case 1:
+            set_info_led(INFO_LED_1, sensor_ok);
+            break;
+          case 2:
+            set_info_led(INFO_LED_D, sensor_ok);
+            break;
+          case 3:
+            set_info_led(INFO_LED_E, sensor_ok);
+            break;
         }
       }
+
+      reset_wheel_clicks();
+      if (line_sensors_checked_count == get_line_sensor_count() && mark_sensors_checked_count == get_mark_sensor_count()) {
+        break;
+      }
+      sensors_checked_last_ms = get_clock_ticks();
     }
+
+    if (line_sensors_checked_count == get_line_sensor_count() && mark_sensors_checked_count == get_mark_sensor_count()) {
+      set_RGB_color(0, 125, 0);
+      set_info_led(INFO_LED_2, true);
+      set_info_led(INFO_LED_1, true);
+      set_info_led(INFO_LED_D, true);
+      set_info_led(INFO_LED_E, true);
+      delay(500);
+      set_RGB_color(0, 0, 0);
+      clear_info_leds();
+    } else {
+      while (!is_right_wheel_click_up()) {
+      }
+    }
+
   } else {
     set_status_led(false);
     delay(1000);
 
-    // Resetear los valores máximos, mínimos y umbrales
     for (uint8_t sensor = 0; sensor < LINE_SENSOR_COUNT; sensor++) {
       line_sensors_max[sensor] = LINE_SENSOR_MIN_VALUE;
       line_sensors_min[sensor] = LINE_SENSOR_MAX_VALUE;
       line_sensors_thr[sensor] = LINE_SENSOR_MIN_VALUE;
+    }
+    for (uint8_t sensor = 0; sensor < MARK_SENSOR_COUNT; sensor++) {
+      mark_sensors_max[sensor] = LINE_SENSOR_MIN_VALUE;
+      mark_sensors_min[sensor] = LINE_SENSOR_MAX_VALUE;
+      mark_sensors_thr[sensor] = LINE_SENSOR_MIN_VALUE;
     }
 
     uint32_t ms_inicio = get_clock_ticks();
@@ -215,34 +280,75 @@ void sensors_calibration(void) {
           line_sensors_max[sensor] = line_sensors_raw[sensor];
         }
       }
+      for (int sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+        if (mark_sensors_raw[sensor] < mark_sensors_min[sensor]) {
+          mark_sensors_min[sensor] = mark_sensors_raw[sensor];
+        }
+        if (mark_sensors_raw[sensor] > mark_sensors_max[sensor]) {
+          mark_sensors_max[sensor] = mark_sensors_raw[sensor];
+        }
+      }
 
       set_RGB_rainbow();
     }
 
-    bool calibration_ok = true;
+    bool line_calibration_ok = true;
     for (int sensor = 0; sensor < get_line_sensor_count(); sensor++) {
       if (abs(line_sensors_max[sensor] - line_sensors_min[sensor]) < 1000) {
-        calibration_ok = false;
+        line_calibration_ok = false;
       }
       line_sensors_thr[sensor] = line_sensors_min[sensor] + ((line_sensors_max[sensor] - line_sensors_min[sensor]) * 2 / 3);
     }
+    bool mark_calibration_ok = true;
+    for (int sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+      bool sensor_ok = true;
+      if (abs(mark_sensors_max[sensor] - mark_sensors_min[sensor]) < 1000) {
+        sensor_ok = false;
+        mark_calibration_ok = false;
+      }
+      mark_sensors_thr[sensor] = mark_sensors_min[sensor] + ((mark_sensors_max[sensor] - mark_sensors_min[sensor]) * 2 / 3);
 
-    eeprom_set_data(DATA_INDEX_SENSORS_MAX, line_sensors_max, LINE_SENSOR_COUNT);
-    eeprom_set_data(DATA_INDEX_SENSORS_MIN, line_sensors_min, LINE_SENSOR_COUNT);
-    eeprom_set_data(DATA_INDEX_SENSORS_UMB, line_sensors_thr, LINE_SENSOR_COUNT);
-
-    if (calibration_ok) {
-      set_RGB_color(0, 100, 0);
-      delay(500);
-    } else {
-      while (!is_right_wheel_click_up()) {
-        if (calibration_ok) {
-          set_RGB_color(0, 100, 0);
-        } else if (!calibration_ok) {
-          set_RGB_color(100, 0, 0);
-        }
+      switch (sensor) {
+        case 0:
+          set_info_led(INFO_LED_2, sensor_ok);
+          break;
+        case 1:
+          set_info_led(INFO_LED_1, sensor_ok);
+          break;
+        case 2:
+          set_info_led(INFO_LED_D, sensor_ok);
+          break;
+        case 3:
+          set_info_led(INFO_LED_E, sensor_ok);
+          break;
       }
     }
+
+    eeprom_set_data(DATA_INDEX_LINE_SENSORS_MAX, line_sensors_max, LINE_SENSORS_DATA_LENGTH);
+    eeprom_set_data(DATA_INDEX_LINE_SENSORS_MIM, line_sensors_min, LINE_SENSORS_DATA_LENGTH);
+    eeprom_set_data(DATA_INDEX_LINE_SENSORS_THR, line_sensors_thr, LINE_SENSORS_DATA_LENGTH);
+
+    eeprom_set_data(DATA_INDEX_MARK_SENSORS_MAX, mark_sensors_max, MARK_SENSORS_DATA_LENGTH);
+    eeprom_set_data(DATA_INDEX_MARK_SENSORS_MIM, mark_sensors_min, MARK_SENSORS_DATA_LENGTH);
+    eeprom_set_data(DATA_INDEX_MARK_SENSORS_THR, mark_sensors_thr, MARK_SENSORS_DATA_LENGTH);
+
+    reset_wheel_clicks();
+    if (line_calibration_ok && mark_calibration_ok) {
+      set_RGB_color(0, 100, 0);
+      delay(500);
+      set_RGB_color(0, 0, 0);
+      clear_info_leds();
+    } else {
+      if (!line_calibration_ok) {
+        set_RGB_color(100, 0, 0);
+      } else {
+        set_RGB_color(100, 100, 0);
+      }
+      while (!is_right_wheel_click_up()) {
+        // waiting
+      }
+    }
+    reset_wheel_clicks();
   }
   set_RGB_color(0, 0, 0);
   sensors_print_calibration();
@@ -251,14 +357,23 @@ void sensors_calibration(void) {
 
 void sensors_load_eeprom(void) {
   int16_t *eeprom_data = eeprom_get_data();
-  for (uint16_t i = DATA_INDEX_SENSORS_MAX; i < DATA_INDEX_SENSORS_MAX + LINE_SENSOR_COUNT; i++) {
-    line_sensors_max[i - DATA_INDEX_SENSORS_MAX] = eeprom_data[i];
+  for (uint16_t i = DATA_INDEX_LINE_SENSORS_MAX; i < DATA_INDEX_LINE_SENSORS_MAX + LINE_SENSOR_COUNT; i++) {
+    line_sensors_max[i - DATA_INDEX_LINE_SENSORS_MAX] = eeprom_data[i];
   }
-  for (uint16_t i = DATA_INDEX_SENSORS_MIN; i < DATA_INDEX_SENSORS_MIN + LINE_SENSOR_COUNT; i++) {
-    line_sensors_min[i - DATA_INDEX_SENSORS_MIN] = eeprom_data[i];
+  for (uint16_t i = DATA_INDEX_LINE_SENSORS_MIM; i < DATA_INDEX_LINE_SENSORS_MIM + LINE_SENSOR_COUNT; i++) {
+    line_sensors_min[i - DATA_INDEX_LINE_SENSORS_MIM] = eeprom_data[i];
   }
-  for (uint16_t i = DATA_INDEX_SENSORS_UMB; i < DATA_INDEX_SENSORS_UMB + LINE_SENSOR_COUNT; i++) {
-    line_sensors_thr[i - DATA_INDEX_SENSORS_UMB] = eeprom_data[i];
+  for (uint16_t i = DATA_INDEX_LINE_SENSORS_THR; i < DATA_INDEX_LINE_SENSORS_THR + LINE_SENSOR_COUNT; i++) {
+    line_sensors_thr[i - DATA_INDEX_LINE_SENSORS_THR] = eeprom_data[i];
+  }
+  for (uint16_t i = DATA_INDEX_MARK_SENSORS_MAX; i < DATA_INDEX_MARK_SENSORS_MAX + MARK_SENSOR_COUNT; i++) {
+    mark_sensors_max[i - DATA_INDEX_MARK_SENSORS_MAX] = eeprom_data[i];
+  }
+  for (uint16_t i = DATA_INDEX_MARK_SENSORS_MIM; i < DATA_INDEX_MARK_SENSORS_MIM + MARK_SENSOR_COUNT; i++) {
+    mark_sensors_min[i - DATA_INDEX_MARK_SENSORS_MIM] = eeprom_data[i];
+  }
+  for (uint16_t i = DATA_INDEX_MARK_SENSORS_THR; i < DATA_INDEX_MARK_SENSORS_THR + MARK_SENSOR_COUNT; i++) {
+    mark_sensors_thr[i - DATA_INDEX_MARK_SENSORS_THR] = eeprom_data[i];
   }
   sensors_print_calibration();
 }
@@ -266,6 +381,10 @@ void sensors_load_eeprom(void) {
 void sensors_print_calibration(void) {
   for (int sensor = 0; sensor < get_line_sensor_count(); sensor++) {
     printf("Sensor %2d: %4d <> %4d <> %4d\n", sensor + 1, line_sensors_min[sensor], line_sensors_thr[sensor], line_sensors_max[sensor]);
+  }
+  printf("___________________________________________\n");
+  for (int sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+    printf("Mark %2d: %4d <> %4d <> %4d\n", sensor + 1, mark_sensors_min[sensor], mark_sensors_thr[sensor], mark_sensors_max[sensor]);
   }
 }
 
@@ -316,8 +435,6 @@ void line_sensors_update_mux_readings(void) {
 }
 
 void line_sensors_update_position(void) {
-
-  //? Bigger Filter
   int8_t sensor_first_line_index = -1;
   int8_t sensor_last_line_index = -1;
   int8_t sensor_reference_index = round(map(line_position, -1000, 1000, -1, get_line_sensor_count()));
@@ -351,9 +468,11 @@ void line_sensors_update_position(void) {
     if (sensor_value >= line_sensors_thr[sensor]) {
       sensors_unfiltered_line_count++;
     }
-    //? Bigger Filter applied
-    if (sensor < sensor_first_line_index || sensor > sensor_last_line_index) {
-      sensor_value = LINE_SENSOR_MIN_VALUE;
+
+    if (menu_run_get_filter_mode() == FILTER_BIGGER) {
+      if (sensor < sensor_first_line_index || sensor > sensor_last_line_index) {
+        sensor_value = LINE_SENSOR_MIN_VALUE;
+      }
     }
 
     if (sensor_value >= line_sensors_thr[sensor]) {

@@ -35,5 +35,6 @@ bool is_left_wheel_click_up(void);
 bool is_left_wheel_click_down(void);
 bool is_right_wheel_click_up(void);
 bool is_right_wheel_click_down(void);
+void reset_wheel_clicks(void);
 
 #endif

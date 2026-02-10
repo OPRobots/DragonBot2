@@ -248,3 +248,10 @@ bool is_right_wheel_click_down(void) {
   }
   return false;
 }
+
+void reset_wheel_clicks(void) {
+  left_wheel_click_up = false;
+  left_wheel_click_down = false;
+  right_wheel_click_up = false;
+  right_wheel_click_down = false;
+}

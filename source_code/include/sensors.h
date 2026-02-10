@@ -22,7 +22,8 @@
 #define ADC2_CHANNEL_COUNT 9
 #define MARK_SENSOR_COUNT 4
 
-#define SENSORS_DATA_LENGTH (LINE_SENSOR_COUNT + MARK_SENSOR_COUNT)
+#define LINE_SENSORS_DATA_LENGTH LINE_SENSOR_COUNT
+#define MARK_SENSORS_DATA_LENGTH MARK_SENSOR_COUNT
 
 uint8_t *get_adc1_channels(void);
 uint8_t get_adc1_channel_count(void);

@@ -15,7 +15,12 @@ static void debug_macroarray(void) {
  */
 static void debug_sensors_raw(void) {
   if (get_clock_ticks() > debug_last_print_ms + 50) {
-    printf("TODO: DEBUG_SENSORS_RAW");
+    for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
+      printf("S%02d: %4d\t", sensor + 1, get_line_sensor_raw(sensor));
+    }
+    for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+      printf("M%02d: %4d\t", sensor + 1, get_mark_sensor_raw(sensor));
+    }
     printf("\n");
     debug_last_print_ms = get_clock_ticks();
   }
@@ -23,7 +28,12 @@ static void debug_sensors_raw(void) {
 
 static void debug_sensors_calibrated(void) {
   if (get_clock_ticks() > debug_last_print_ms + 50) {
-    printf("TODO: DEBUG_SENSORS_CALIBRATED");
+    for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
+      printf("S%02d: %4d\t", sensor + 1, get_line_sensor_calibrated(sensor));
+    }
+    for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
+      printf("M%02d: %4d\t", sensor + 1, get_mark_sensor_calibrated(sensor));
+    }
     printf("\n");
     debug_last_print_ms = get_clock_ticks();
   }
@@ -32,6 +42,7 @@ static void debug_sensors_calibrated(void) {
 static void debug_all_leds(void) {
   set_RGB_rainbow();
   warning_status_led(125);
+  set_leds_wave(50);
 }
 
 static void debug_posicion_correccion(void) {
@@ -58,11 +69,11 @@ static void debug_encoders(void) {
 }
 
 static void debug_motors(void) {
-    set_motors_speed(15, 15);
+  set_motors_speed(15, 15);
 }
 
 static void debug_fans(void) {
-    set_fan_speed(30);
+  set_fan_speed(30);
 }
 
 static void check_debug_active(void) {
