@@ -1,4 +1,4 @@
-23840606585589876
+23858306103438777
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -96642,6 +96642,13 @@ SOIC 1.27
 8
 8
 custom_footprints
+AON7423
+8-Lead Plastic Dual Flat, No Lead Package (MF) - 3x3x0.9 mm Body [DFN] (see Microchip Packaging Specification 00000049BS.pdf)
+DFN 0.65
+0
+13
+8
+custom_footprints
 BTN9960LV
 
 
@@ -96690,6 +96697,55 @@ DC-DC_3.3 CN3903
 0
 4
 4
+custom_footprints
+DargonBot2_QRE1113
+
+
+0
+12
+4
+custom_footprints
+DragonBot2_Encoder_main
+Through hole straight pin header, 1x04, 1.27mm pitch, single row
+Through hole pin header THT 1x04 1.27mm single row
+0
+27
+4
+custom_footprints
+DragonBot2_Mark_sensors_conn
+Through hole straight pin header, 1x05, 2.54mm pitch, single row
+Through hole pin header THT 1x05 2.54mm single row
+0
+8
+4
+custom_footprints
+DragonBot2_QRE1113
+
+
+0
+12
+4
+custom_footprints
+DragonBot_pad_marcas
+Through hole straight pin header, 1x05, 2.54mm pitch, single row
+Through hole pin header THT 1x05 2.54mm single row
+0
+8
+4
+custom_footprints
+DragonBot_pads_main
+
+
+0
+16
+8
+custom_footprints
+DragonBot_pads_morro
+
+
+0
+16
+8
 custom_footprints
 ESP32_supermini
 
@@ -96873,6 +96929,13 @@ Mini360
 4
 4
 custom_footprints
+Mosfet_succion_BUK9Q20
+SOT, 3 Pin (https://www.jedec.org/system/files/docs/to-236h.pdf variant AB), generated with kicad-footprint-generator ipc_gullwing_generator.py
+SOT TO_SOT_SMD
+0
+9
+8
+custom_footprints
 PH-MP6551GQB-P
 WQFN, 14 Pin (https://www.onsemi.com/pub/Collateral/FUSB302B-D.PDF#page=32), generated with kicad-footprint-generator ipc_noLead_generator.py
 WQFN NoLead
@@ -96956,6 +97019,13 @@ te fpc 1734839
 0
 10
 9
+custom_footprints
+TQFN-26_MP6615_MNP
+
+MP6615GQKT-P 
+0
+26
+26
 custom_footprints
 USB-C ST-Link USART
 16-pin USB-C receptacle, USB2.0 and PD, 5A VBUS rating, https://datasheet.lcsc.com/lcsc/2211161000_HCTL-HC-TYPE-C-16P-01A_C2894897.pdf
