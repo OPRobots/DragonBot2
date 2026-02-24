@@ -23081,17 +23081,6 @@
 		)
 		(uuid "4beb18c7-4ed8-4959-9ff2-587979ea5b22")
 	)
-	(label "GND_MPU"
-		(at 168.91 217.17 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "52a6fb8c-eb5b-436f-a78e-5c7cac8131ea")
-	)
 	(label "LED9"
 		(at 163.83 113.03 180)
 		(fields_autoplaced yes)
@@ -23476,6 +23465,17 @@
 			(justify left bottom)
 		)
 		(uuid "78161d69-f97b-4e2e-9e56-f1bdcf1e4a5a")
+	)
+	(label "3.3_MPU"
+		(at 168.91 217.17 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "7efe0ad4-3290-424d-9702-8b001b94ceff")
 	)
 	(label "PWM_MOT_RA"
 		(at 332.74 109.22 0)

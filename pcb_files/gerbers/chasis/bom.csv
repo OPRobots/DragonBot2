@@ -1,0 +1,8 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"_10, _9, _8, _7, _6, _5, _4, _3, _2, ",,10,,
+J1,PinHeader_1x01_P2.54mm_Vertical,1,Conn_01x01_Pin,
+J2,DragonBot_pads_main,1,Conn_01x08_Pin,
+J3,DragonBot_pads_morro,1,Conn_01x08_Pin,
+JP2,SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm,1,SolderJumper_2_Open,
+POWER_SWITCH1,Generic_Swich_ONOFF,1,SW_DPDT_x2,
+USB1,USB-C ST-Link USART,1,~,

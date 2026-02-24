@@ -1,3 +1,6 @@
 [submodule "pcb_files/kicad_project/main/custom_libraries"]
 	path = pcb_files/kicad_project/main/custom_libraries
 	url = https://github.com/OPRobots/KiCADLibraries.git
+[submodule "pcb_files/kicad_project/chasis/custom_libraries"]
+	path = pcb_files/kicad_project/chasis/custom_libraries
+	url = https://github.com/OPRobots/KiCADLibraries.git
