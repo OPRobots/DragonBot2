@@ -36377,8 +36377,8 @@
 				)
 			)
 		)
-		(property "Value" "~"
-			(at 196.85 265.43 0)
+		(property "Value" "BMP280"
+			(at 196.85 280.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -39044,8 +39044,8 @@
 				)
 			)
 		)
-		(property "Value" "~"
-			(at 143.51 220.98 0)
+		(property "Value" "LDL212PV33R"
+			(at 143.51 233.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
