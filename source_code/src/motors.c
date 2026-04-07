@@ -9,6 +9,8 @@ static uint16_t angular_speed_saturation_count = 0;
 
 static bool check_motors_saturated_enabled = true;
 
+static volatile uint16_t motor_current_raw[MOTOR_CURRENT_COUNT];
+
 static void check_motors_saturated(void) {
   if (check_motors_saturated_enabled) {
     if (left_motor_saturation_count > MAX_MOTOR_SATURATION_COUNT || right_motor_saturation_count > MAX_MOTOR_SATURATION_COUNT) {
@@ -38,12 +40,24 @@ void set_check_motors_saturated_enabled(bool enabled) {
   check_motors_saturated_enabled = enabled;
 }
 
-void set_motors_enable(bool enabled) {
-  if (enabled) {
-    gpio_set(GPIOB, GPIO15);
+void motor_current_update_readings(uint8_t index, uint16_t current) {
+  motor_current_raw[index] = current;
+}
+
+uint16_t get_motor_current_raw(uint8_t index) {
+  if (index < MOTOR_CURRENT_COUNT) {
+    return motor_current_raw[index];
   } else {
-    gpio_clear(GPIOB, GPIO15);
+    return 0;
   }
+}
+
+void set_motors_enable(bool enabled) {
+  // if (enabled) {
+  //   gpio_set(GPIOB, GPIO15);
+  // } else {
+  //   gpio_clear(GPIOB, GPIO15);
+  // }
 }
 
 void set_motors_speed(float velI, float velD) {
@@ -52,29 +66,29 @@ void set_motors_speed(float velI, float velD) {
 
   ocI = map(abs(velI), 0, 1000, 0, MOTORS_MAX_PWM);
   if (velI > 0) {
-    timer_set_oc_value(TIM8, TIM_OC4, MOTORS_MAX_PWM - (uint32_t)ocI);
-    timer_set_oc_value(TIM8, TIM_OC3, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - (uint32_t)ocI);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM8, TIM_OC3, MOTORS_MAX_PWM - (uint32_t)ocI);
-    timer_set_oc_value(TIM8, TIM_OC4, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - (uint32_t)ocI);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
   }
 
   ocD = map(abs(velD), 0, 1000, 0, MOTORS_MAX_PWM);
   if (velD > 0) {
-    timer_set_oc_value(TIM8, TIM_OC2, MOTORS_MAX_PWM - (uint32_t)ocD);
-    timer_set_oc_value(TIM8, TIM_OC1, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - (uint32_t)ocD);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM8, TIM_OC1, MOTORS_MAX_PWM - (uint32_t)ocD);
-    timer_set_oc_value(TIM8, TIM_OC2, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - (uint32_t)ocD);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
   }
   // printf("%ld - %ld\n", (uint32_t)ocI, (uint32_t)ocD);
 }
 
 void set_motors_brake(void) {
-  timer_set_oc_value(TIM8, TIM_OC1, MOTORS_MAX_PWM);
-  timer_set_oc_value(TIM8, TIM_OC2, MOTORS_MAX_PWM);
-  timer_set_oc_value(TIM8, TIM_OC3, MOTORS_MAX_PWM);
-  timer_set_oc_value(TIM8, TIM_OC4, MOTORS_MAX_PWM);
+  timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
+  timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
+  timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
+  timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
 }
 
 void set_motors_pwm(int32_t pwm_left, int32_t pwm_right) {
@@ -91,11 +105,11 @@ void set_motors_pwm(int32_t pwm_left, int32_t pwm_right) {
   }
 
   if (pwm_left >= 0) {
-    timer_set_oc_value(TIM8, TIM_OC4, MOTORS_MAX_PWM - abs(pwm_left));
-    timer_set_oc_value(TIM8, TIM_OC3, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - abs(pwm_left));
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM8, TIM_OC3, MOTORS_MAX_PWM - abs(pwm_left));
-    timer_set_oc_value(TIM8, TIM_OC4, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - abs(pwm_left));
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
   }
 
   if (pwm_right > MOTORS_MAX_PWM) {
@@ -111,11 +125,11 @@ void set_motors_pwm(int32_t pwm_left, int32_t pwm_right) {
   }
 
   if (pwm_right >= 0) {
-    timer_set_oc_value(TIM8, TIM_OC2, MOTORS_MAX_PWM - abs(pwm_right));
-    timer_set_oc_value(TIM8, TIM_OC1, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - abs(pwm_right));
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM8, TIM_OC1, MOTORS_MAX_PWM - abs(pwm_right));
-    timer_set_oc_value(TIM8, TIM_OC2, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - abs(pwm_right));
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
   }
 
   if (abs(get_encoder_angular_speed()) >= MOTORES_SATURATION_ANGULAR_SPEED) {
@@ -134,7 +148,7 @@ void set_fan_speed(uint8_t vel) {
     ocF = map(abs(vel), 0, 100, 0, LEDS_MAX_PWM);
   }
   // printf("%ld\n", ocF);
-  timer_set_oc_value(TIM1, TIM_OC1, ocF);
+  timer_set_oc_value(TIM8, TIM_OC1, ocF);
 }
 
 void reset_motors_saturated(void) {

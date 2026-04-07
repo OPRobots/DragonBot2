@@ -10,13 +10,8 @@ void set_battery_volt_div_factor(uint16_t version) {
   switch (version) {
     case DRAGONBOT2_A:
     case DRAGONBOT2_B:
-      voltage_div_factor = VOLT_DIV_FACTOR_2S;
-      break;
     case DRAGONBOT2_C:
       voltage_div_factor = VOLT_DIV_FACTOR_3S;
-      break;
-    default:
-      voltage_div_factor = VOLT_DIV_FACTOR_2S;
       break;
   }
 }

@@ -199,7 +199,7 @@ void control_loop(void) {
   // gpio_set(GPIOB, GPIO13);
   // delay_us(100);
   // gpio_clear(GPIOB, GPIO13);
-  // return;
+  return;
   if (is_debug_enabled()) {
     return;
   }

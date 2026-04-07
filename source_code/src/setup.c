@@ -1,5 +1,7 @@
 #include "setup.h"
 
+static enum RC5_TRIGGER rc5_trigger = RC5_TRIGGER_FALLING;
+
 /**
  * @brief Configura los relojes principales del robot
  *
@@ -17,6 +19,7 @@ static void setup_clock(void) {
   rcc_periph_clock_enable(RCC_GPIOA);
   rcc_periph_clock_enable(RCC_GPIOB);
   rcc_periph_clock_enable(RCC_GPIOC);
+  rcc_periph_clock_enable(RCC_GPIOD);
 
   rcc_periph_clock_enable(RCC_SYSCFG);
 
@@ -52,17 +55,18 @@ static void setup_systick(void) {
 
 static void setup_timer_priorities(void) {
   nvic_set_priority(NVIC_SYSTICK_IRQ, 16 * 0);
-  nvic_set_priority(NVIC_DMA1_STREAM0_IRQ, 16 * 1);
-  nvic_set_priority(NVIC_DMA2_STREAM0_IRQ, 16 * 2);
+  nvic_set_priority(NVIC_DMA2_STREAM0_IRQ, 16 * 1);
+  nvic_set_priority(NVIC_DMA2_STREAM2_IRQ, 16 * 2);
   nvic_set_priority(NVIC_TIM2_IRQ, 16 * 3);
   nvic_set_priority(NVIC_TIM5_IRQ, 16 * 4);
   nvic_set_priority(NVIC_USART3_IRQ, 16 * 5);
 
-  nvic_enable_irq(NVIC_DMA1_STREAM0_IRQ);
   nvic_enable_irq(NVIC_DMA2_STREAM0_IRQ);
+  nvic_enable_irq(NVIC_DMA2_STREAM2_IRQ);
   nvic_enable_irq(NVIC_TIM5_IRQ);
   nvic_enable_irq(NVIC_TIM2_IRQ);
   nvic_enable_irq(NVIC_USART3_IRQ);
+  nvic_enable_irq(NVIC_EXTI15_10_IRQ);
 }
 
 static void setup_usart(void) {
@@ -86,8 +90,8 @@ static void setup_gpio(void) {
   // Salidas digitales multiplexadores
   gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO13 | GPIO14 | GPIO15);
 
-  // Entrada digital IR-Remote
-  gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO12);
+  // // Entrada digital IR-Remote
+  // gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO12);
 
   // Entradas Encoders
   gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO4 | GPIO5 | GPIO6 | GPIO7);
@@ -96,6 +100,7 @@ static void setup_gpio(void) {
   // Salida digital LED's Menu
   gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO8 | GPIO9 | GPIO12 | GPIO13 | GPIO14);
   gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
+  gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO5);
 
   // Salida PWM LEDS y Ventilador
   gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7 | GPIO8 | GPIO9);
@@ -105,8 +110,6 @@ static void setup_gpio(void) {
   gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8 | GPIO9 | GPIO10 | GPIO11);
   gpio_set_af(GPIOA, GPIO_AF1, GPIO8 | GPIO9 | GPIO10 | GPIO11);
 
-  // Salida Auxiliar
-  gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO4);
 
   // USART3
   gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10 | GPIO11);
@@ -120,9 +123,34 @@ static void setup_gpio(void) {
   gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO15);
   gpio_set(GPIOB, GPIO15);
 
+  // SRAM
+  gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO4);
+  gpio_set(GPIOC, GPIO4);
+
   // SPI3
   gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_PULLDOWN, GPIO10 | GPIO11 | GPIO12);
   gpio_set_af(GPIOC, GPIO_AF6, GPIO10 | GPIO11 | GPIO12);
+
+  // IR 38kHz
+  exti_select_source(EXTI12, GPIOA);
+  rc5_trigger = RC5_TRIGGER_FALLING;
+  exti_set_trigger(EXTI12, EXTI_TRIGGER_FALLING);
+  exti_enable_request(EXTI12);
+}
+
+void exti15_10_isr(void) {
+  exti_reset_request(EXTI12);
+  rc5_register(rc5_trigger);
+  switch (rc5_trigger) {
+    case RC5_TRIGGER_FALLING:
+      rc5_trigger = RC5_TRIGGER_RISING;
+      exti_set_trigger(EXTI12, EXTI_TRIGGER_RISING);
+      break;
+    case RC5_TRIGGER_RISING:
+      rc5_trigger = RC5_TRIGGER_FALLING;
+      exti_set_trigger(EXTI12, EXTI_TRIGGER_FALLING);
+      break;
+  }
 }
 
 static void setup_adc1(void) {
@@ -150,32 +178,32 @@ static void setup_adc1(void) {
 
 static void setup_dma_adc1(void) {
   rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC1EN);
-  rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_DMA1EN);
-  dma_stream_reset(DMA1, DMA_STREAM0);
+  rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_DMA2EN);
+  dma_stream_reset(DMA2, DMA_STREAM0);
 
-  dma_set_peripheral_address(DMA1, DMA_STREAM0, (uint32_t)&ADC_DR(ADC1));
-  dma_set_memory_address(DMA1, DMA_STREAM0, (uint32_t)get_adc1_raw());
-  dma_enable_memory_increment_mode(DMA1, DMA_STREAM0);
-  dma_set_peripheral_size(DMA1, DMA_STREAM0, DMA_SxCR_PSIZE_16BIT);
-  dma_set_memory_size(DMA1, DMA_STREAM0, DMA_SxCR_MSIZE_16BIT);
-  dma_set_priority(DMA1, DMA_STREAM0, DMA_SxCR_PL_LOW);
+  dma_set_peripheral_address(DMA2, DMA_STREAM0, (uint32_t)&ADC_DR(ADC1));
+  dma_set_memory_address(DMA2, DMA_STREAM0, (uint32_t)get_adc1_raw());
+  dma_enable_memory_increment_mode(DMA2, DMA_STREAM0);
+  dma_set_peripheral_size(DMA2, DMA_STREAM0, DMA_SxCR_PSIZE_16BIT);
+  dma_set_memory_size(DMA2, DMA_STREAM0, DMA_SxCR_MSIZE_16BIT);
+  dma_set_priority(DMA2, DMA_STREAM0, DMA_SxCR_PL_LOW);
 
-  dma_enable_transfer_complete_interrupt(DMA1, DMA_STREAM0);
-  // dma_enable_half_transfer_interrupt(DMA1, DMA_STREAM0);
-  dma_set_number_of_data(DMA1, DMA_STREAM0, get_adc1_channel_count());
-  dma_enable_circular_mode(DMA1, DMA_STREAM0);
-  dma_set_transfer_mode(DMA1, DMA_STREAM0, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
-  dma_channel_select(DMA1, DMA_STREAM0, DMA_SxCR_CHSEL_0);
+  dma_enable_transfer_complete_interrupt(DMA2, DMA_STREAM0);
+  // dma_enable_half_transfer_interrupt(DMA2, DMA_STREAM0);
+  dma_set_number_of_data(DMA2, DMA_STREAM0, get_adc1_channel_count());
+  dma_enable_circular_mode(DMA2, DMA_STREAM0);
+  dma_set_transfer_mode(DMA2, DMA_STREAM0, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+  dma_channel_select(DMA2, DMA_STREAM0, DMA_SxCR_CHSEL_0);
 
-  dma_enable_stream(DMA1, DMA_STREAM0);
+  dma_enable_stream(DMA2, DMA_STREAM0);
   adc_enable_dma(ADC1);
   adc_set_dma_continue(ADC1);
 }
 
-void dma1_stream0_isr(void) {
-  if (dma_get_interrupt_flag(DMA1, DMA_STREAM0, DMA_TCIF)) {
+void dma2_stream0_isr(void) {
+  if (dma_get_interrupt_flag(DMA2, DMA_STREAM0, DMA_TCIF)) {
     line_sensors_update_mux_readings();
-    dma_clear_interrupt_flags(DMA1, DMA_STREAM0, DMA_TCIF);
+    dma_clear_interrupt_flags(DMA2, DMA_STREAM0, DMA_TCIF);
   }
 }
 
@@ -209,54 +237,81 @@ static void setup_adc2(void) {
 static void setup_dma_adc2(void) {
   rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC2EN);
   rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_DMA2EN);
-  dma_stream_reset(DMA2, DMA_STREAM0);
+  dma_stream_reset(DMA2, DMA_STREAM2);
 
-  dma_set_peripheral_address(DMA2, DMA_STREAM0, (uint32_t)&ADC_DR(ADC2));
-  dma_set_memory_address(DMA2, DMA_STREAM0, (uint32_t)get_adc2_raw());
-  dma_enable_memory_increment_mode(DMA2, DMA_STREAM0);
-  dma_set_peripheral_size(DMA2, DMA_STREAM0, DMA_SxCR_PSIZE_16BIT);
-  dma_set_memory_size(DMA2, DMA_STREAM0, DMA_SxCR_MSIZE_16BIT);
-  dma_set_priority(DMA2, DMA_STREAM0, DMA_SxCR_PL_LOW);
+  dma_set_peripheral_address(DMA2, DMA_STREAM2, (uint32_t)&ADC_DR(ADC2));
+  dma_set_memory_address(DMA2, DMA_STREAM2, (uint32_t)get_adc2_raw());
+  dma_enable_memory_increment_mode(DMA2, DMA_STREAM2);
+  dma_set_peripheral_size(DMA2, DMA_STREAM2, DMA_SxCR_PSIZE_16BIT);
+  dma_set_memory_size(DMA2, DMA_STREAM2, DMA_SxCR_MSIZE_16BIT);
+  dma_set_priority(DMA2, DMA_STREAM2, DMA_SxCR_PL_LOW);
 
-  dma_enable_transfer_complete_interrupt(DMA2, DMA_STREAM0);
-  // dma_enable_half_transfer_interrupt(DMA2, DMA_STREAM0);
-  dma_set_number_of_data(DMA2, DMA_STREAM0, get_adc2_channel_count());
-  dma_enable_circular_mode(DMA2, DMA_STREAM0);
-  dma_set_transfer_mode(DMA2, DMA_STREAM0, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
-  dma_channel_select(DMA2, DMA_STREAM0, DMA_SxCR_CHSEL_0);
+  dma_enable_transfer_complete_interrupt(DMA2, DMA_STREAM2);
+  // dma_enable_half_transfer_interrupt(DMA2, DMA_STREAM2);
+  dma_set_number_of_data(DMA2, DMA_STREAM2, get_adc2_channel_count());
+  dma_enable_circular_mode(DMA2, DMA_STREAM2);
+  dma_set_transfer_mode(DMA2, DMA_STREAM2, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+  dma_channel_select(DMA2, DMA_STREAM2, DMA_SxCR_CHSEL_1);
 
-  dma_enable_stream(DMA2, DMA_STREAM0);
+  dma_enable_stream(DMA2, DMA_STREAM2);
   adc_enable_dma(ADC2);
   adc_set_dma_continue(ADC2);
 }
 
-void dma2_stream0_isr(void) {
-  if (dma_get_interrupt_flag(DMA2, DMA_STREAM0, DMA_TCIF)) {
+void dma2_stream2_isr(void) {
+  if (dma_get_interrupt_flag(DMA2, DMA_STREAM2, DMA_TCIF)) {
     volatile uint16_t *adc2_raw = get_adc2_raw();
 
     mark_sensors_update_readings(0, adc2_raw[0]);
     mark_sensors_update_readings(1, adc2_raw[1]);
     mark_sensors_update_readings(2, adc2_raw[2]);
     mark_sensors_update_readings(3, adc2_raw[3]);
-    //adc2_raw[4]
-    //adc2_raw[5]
-    //adc2_raw[6]
-    //adc2_raw[7]
+    motor_current_update_readings(0, adc2_raw[4]);
+    motor_current_update_readings(1, adc2_raw[5]);
+    motor_current_update_readings(2, adc2_raw[6]);
+    motor_current_update_readings(3, adc2_raw[7]);
     battery_update_readings(adc2_raw[8]);
 
-    dma_clear_interrupt_flags(DMA2, DMA_STREAM0, DMA_TCIF);
+    dma_clear_interrupt_flags(DMA2, DMA_STREAM2, DMA_TCIF);
+    // toggle_status_led();
   }
 }
 
 static void setup_leds_pwm(void) {
+  timer_set_mode(TIM8, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+
+  timer_set_prescaler(TIM8, ((rcc_apb2_frequency * 2) / 20000000 - 1)); // 20kHz
+  timer_set_repetition_counter(TIM8, 0);
+  timer_enable_preload(TIM8);
+  timer_continuous_mode(TIM8);
+  timer_set_period(TIM8, LEDS_MAX_PWM);
+
+  timer_set_oc_mode(TIM8, TIM_OC1, TIM_OCM_PWM1);
+  timer_set_oc_mode(TIM8, TIM_OC2, TIM_OCM_PWM1);
+  timer_set_oc_mode(TIM8, TIM_OC3, TIM_OCM_PWM1);
+  timer_set_oc_mode(TIM8, TIM_OC4, TIM_OCM_PWM1);
+  timer_set_oc_value(TIM8, TIM_OC1, 0);
+  timer_set_oc_value(TIM8, TIM_OC2, 0);
+  timer_set_oc_value(TIM8, TIM_OC3, 0);
+  timer_set_oc_value(TIM8, TIM_OC4, 0);
+  timer_enable_oc_output(TIM8, TIM_OC1);
+  timer_enable_oc_output(TIM8, TIM_OC2);
+  timer_enable_oc_output(TIM8, TIM_OC3);
+  timer_enable_oc_output(TIM8, TIM_OC4);
+
+  timer_enable_break_main_output(TIM8);
+
+  timer_enable_counter(TIM8);
+}
+
+static void setup_motors_pwm(void) {
   timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
 
-  timer_set_prescaler(TIM1, rcc_apb2_frequency * 2 / 4000000 - 2);
-  // 400000 es la frecuencia a la que irá el PWM 4 kHz, los dos últimos ceros no se porqué, pero son necesarios ya que rcc_apb2_frequency también añade dos ceros a mayores
+  timer_set_prescaler(TIM1, ((rcc_apb2_frequency * 2) / 20000000 - 1)); // 20kHz
   timer_set_repetition_counter(TIM1, 0);
   timer_enable_preload(TIM1);
   timer_continuous_mode(TIM1);
-  timer_set_period(TIM1, LEDS_MAX_PWM);
+  timer_set_period(TIM1, MOTORS_MAX_PWM);
 
   timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM1);
   timer_set_oc_mode(TIM1, TIM_OC2, TIM_OCM_PWM1);
@@ -276,27 +331,6 @@ static void setup_leds_pwm(void) {
   timer_enable_counter(TIM1);
 }
 
-static void setup_motors_pwm(void) {
-  timer_set_mode(TIM8, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
-
-  // 84000000
-  timer_set_prescaler(TIM8, rcc_apb2_frequency * 2 / 4000000 - 2);
-  // 4000000 es la frecuencia a la que irá el PWM 4 kHz, los dos últimos ceros no se porqué, pero son necesarios ya que rcc_apb2_frequency también añade dos ceros a mayores
-  timer_set_repetition_counter(TIM8, 0);
-  timer_enable_preload(TIM8);
-  timer_continuous_mode(TIM8);
-  timer_set_period(TIM8, MOTORS_MAX_PWM);
-
-  timer_set_oc_mode(TIM8, TIM_OC1, TIM_OCM_PWM1);
-  timer_set_oc_mode(TIM8, TIM_OC2, TIM_OCM_PWM1);
-  timer_set_oc_mode(TIM8, TIM_OC3, TIM_OCM_PWM1);
-  timer_set_oc_mode(TIM8, TIM_OC4, TIM_OCM_PWM1);
-
-  timer_enable_break_main_output(TIM8);
-
-  timer_enable_counter(TIM8);
-}
-
 static void setup_main_loop_timer(void) {
   rcc_periph_reset_pulse(RST_TIM5);
   timer_set_mode(TIM5, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
@@ -306,14 +340,13 @@ static void setup_main_loop_timer(void) {
   timer_set_period(TIM5, 1024);
 
   timer_enable_counter(TIM5);
-  timer_enable_irq(TIM5, TIM_DIER_CC1IE);
+  // timer_enable_irq(TIM5, TIM_DIER_CC1IE);
 }
 
 void tim5_isr(void) {
   if (timer_get_flag(TIM5, TIM_SR_CC1IF)) {
     timer_clear_flag(TIM5, TIM_SR_CC1IF);
     control_loop();
-    // gpio_toggle(GPIOA, GPIO12);
   }
 }
 

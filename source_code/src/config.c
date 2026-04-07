@@ -2,12 +2,12 @@
 
 void handle_robot_version(void) {
   enum ROBOT_VERSION robot_version = DRAGONBOT2_UNKNOWN;
-  if (UID_WORD0 == 0x00310016 && UID_WORD1 == 0x3038470E && UID_WORD2 == 0x39323137) {
-    robot_version = DRAGONBOT2_B;
-  } else if (UID_WORD0 == 0x0039001C && UID_WORD1 == 0x3235510F && UID_WORD2 == 0x32313338) {
-    robot_version = DRAGONBOT2_C;
-  } else if (UID_WORD0 != 0 && UID_WORD1 != 0 && UID_WORD2 != 0) {
+  if (UID_WORD0 == 0x00480049 && UID_WORD1 == 0x304E5005 && UID_WORD2 == 0x2030384B) {
     robot_version = DRAGONBOT2_A;
+  } else if (UID_WORD0 != 0 && UID_WORD1 != 0 && UID_WORD2 != 0) {
+    robot_version = DRAGONBOT2_B;
+  } else if (UID_WORD0 != 0 && UID_WORD1 != 0 && UID_WORD2 != 0) {
+    robot_version = DRAGONBOT2_C;
   }
 
   printf("UID: %08X %08X %08X\n", (unsigned int)UID_WORD0, (unsigned int)UID_WORD1, (unsigned int)UID_WORD2);

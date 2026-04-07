@@ -1,7 +1,7 @@
 #include "sensors.h"
 
 // ADC de derecha a izquierda
-static uint8_t adc1_channels[ADC1_CHANNEL_COUNT] = {ADC_CHANNEL11, ADC_CHANNEL12, ADC_CHANNEL10};
+static uint8_t adc1_channels[ADC1_CHANNEL_COUNT] = {ADC_CHANNEL11, ADC_CHANNEL10, ADC_CHANNEL12};
 static volatile uint16_t adc1_raw[ADC1_CHANNEL_COUNT];
 
 static uint8_t adc2_channels[ADC2_CHANNEL_COUNT] = {ADC_CHANNEL0, ADC_CHANNEL1, ADC_CHANNEL2, ADC_CHANNEL3, ADC_CHANNEL4, ADC_CHANNEL5, ADC_CHANNEL6, ADC_CHANNEL7, ADC_CHANNEL13};
@@ -391,6 +391,7 @@ void sensors_print_calibration(void) {
 void line_sensors_update_mux_readings(void) {
   // ! Caution: Parece que al activar el ADC2 (lectura de batería) se desordenan los canales del ADC1 wtf?
   // ! Al ir actualizando el código, a veces se cambian los canales por la puta cara wtffff??
+  // mux_index = 7;
   line_sensors_raw[(MUX_CHANNEL_COUNT) + mux_index] = adc1_raw[0];
   line_sensors_raw[mux_index] = adc1_raw[1];
   line_sensors_raw[2 * (MUX_CHANNEL_COUNT) + mux_index] = adc1_raw[2];

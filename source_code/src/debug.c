@@ -16,10 +16,11 @@ static void debug_macroarray(void) {
 static void debug_sensors_raw(void) {
   if (get_clock_ticks() > debug_last_print_ms + 50) {
     for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
-      printf("S%02d: %4d\t", sensor + 1, get_line_sensor_raw(sensor));
+      printf("%4d ", get_line_sensor_raw(sensor));
     }
+    printf("| ");
     for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
-      printf("M%02d: %4d\t", sensor + 1, get_mark_sensor_raw(sensor));
+      printf("%4d ", get_mark_sensor_raw(sensor));
     }
     printf("\n");
     debug_last_print_ms = get_clock_ticks();
@@ -69,7 +70,20 @@ static void debug_encoders(void) {
 }
 
 static void debug_motors(void) {
-  set_motors_speed(15, 15);
+  set_motors_speed(150, 150);
+  if (get_clock_ticks() > debug_last_print_ms + 50) {
+    printf("Motor Current: ");
+    for (uint8_t i = 0; i < MOTOR_CURRENT_COUNT; i++) {
+      if (i < MOTOR_CURRENT_COUNT / 2) {
+        printf("L%d: ", i);
+      } else {
+        printf("R%d: ", i - MOTOR_CURRENT_COUNT / 2);
+      }
+      printf("%4d mA  ", get_motor_current_raw(i));
+    }
+    printf("\n");
+    debug_last_print_ms = get_clock_ticks();
+  }
 }
 
 static void debug_fans(void) {
