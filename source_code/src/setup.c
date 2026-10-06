@@ -85,13 +85,11 @@ static void setup_gpio(void) {
 
   // Entradas analógicas sensores de línea y batería
   gpio_mode_setup(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3);
+  // Entradas analógicas sensores de marcas y corriente
   gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO6 | GPIO7);
 
   // Salidas digitales multiplexadores
   gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO13 | GPIO14 | GPIO15);
-
-  // // Entrada digital IR-Remote
-  // gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO12);
 
   // Entradas Encoders
   gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO4 | GPIO5 | GPIO6 | GPIO7);
@@ -119,7 +117,7 @@ static void setup_gpio(void) {
   gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO15);
   gpio_set(GPIOA, GPIO15);
 
-  // Barómetro
+  // BMP
   gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO15);
   gpio_set(GPIOB, GPIO15);
 

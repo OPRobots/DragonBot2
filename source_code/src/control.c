@@ -219,12 +219,9 @@ void control_loop(void) {
       set_motors_brake();
     } else {
       set_motors_speed(0, 0);
-      set_motors_enable(false);
     }
     set_fan_speed(0);
     return;
-  } else {
-    set_motors_enable(true);
   }
 
   update_ideal_linear_speed();

@@ -18,8 +18,7 @@
 void motor_current_update_readings(uint8_t index, uint16_t current);
 uint16_t get_motor_current_raw(uint8_t index);
 
-void set_motors_enable(bool enabled);
-void set_motors_speed(float velI, float velD);
+void set_motors_speed(int16_t velI, int16_t velD);
 void set_motors_brake(void);
 void set_motors_pwm(int32_t pwm_left, int32_t pwm_right);
 void set_fan_speed(uint8_t vel);

@@ -5,6 +5,7 @@
 void sys_tick_handler(void) {
   clock_tick();
   update_battery_voltage();
+  update_encoder_readings();
 }
 
 int main(void) {
@@ -20,8 +21,10 @@ int main(void) {
     // set_info_leds();
     // set_RGB_rainbow();
     // set_RGB_color(0, 0, 0);
-    // set_motors_speed(1000, 1000);
-    // set_leds_wave(75);
+    set_motors_speed(0, 0);
+    set_leds_wave(75);
+    // set_info_led(INFO_LED_2, true);
+    // set_info_led(INFO_LED_B, true);
     // gpio_set(GPIOA, GPIO11);
     // gpio_clear(GPIOA, GPIO10);
     // gpio_set(GPIOA, GPIO9);
@@ -30,11 +33,12 @@ int main(void) {
 
     // printf("Battery voltage: %.2f V\n", get_battery_voltage());
     // debug_from_main(DEBUG_TYPE_SENSORS_RAW);
+    // debug_from_main(DEBUG_TYPE_ENCODERS);
     // debug_from_main(DEBUG_TYPE_MOTORS);
     // printf("MPU WhoAmI: 0x%02X\n", lsm6dsr_who_am_i());
 
-    sram_set_mode();
-    printf("SRAM Mode: 0x%02X\n", sram_get_mode());
+    // sram_set_mode();
+    // printf("SRAM Mode: 0x%02X\n", sram_get_mode());
 
     // printf("BMP280 WhoAmI: 0x%02X\n", bmp280_who_am_i());
     delay(150);

@@ -80,9 +80,9 @@ void set_RGB_rainbow(void) {
     rainbow_rgb[rainbow_color_desc] -= 20;
     rainbow_rgb[rainbow_color_asc] += 20;
     set_RGB_color(rainbow_rgb[0], rainbow_rgb[1], rainbow_rgb[2]);
-    if (rainbow_rgb[rainbow_color_desc] <= 0 || rainbow_rgb[rainbow_color_asc] >= LEDS_MAX_PWM/4) {
+    if (rainbow_rgb[rainbow_color_desc] <= 0 || rainbow_rgb[rainbow_color_asc] >= LEDS_MAX_PWM / 4) {
       rainbow_rgb[rainbow_color_desc] = 0;
-      rainbow_rgb[rainbow_color_asc] = LEDS_MAX_PWM/4;
+      rainbow_rgb[rainbow_color_asc] = LEDS_MAX_PWM / 4;
       set_RGB_color(rainbow_rgb[0], rainbow_rgb[1], rainbow_rgb[2]);
       rainbow_color_desc++;
       if (rainbow_color_desc > 2) {
@@ -195,72 +195,72 @@ void all_leds_clear(void) {
   gpio_clear(GPIOD, GPIO2);
 }
 
-void set_info_led(uint8_t index, bool state) {
+void set_info_led(enum info_led index, bool state) {
   switch (index) {
-    case 0:
-      if (state) {
-        gpio_set(GPIOB, GPIO9);
-      } else {
-        gpio_clear(GPIOB, GPIO9);
-      }
-      break;
-    case 1:
-      if (state) {
-        gpio_set(GPIOB, GPIO8);
-      } else {
-        gpio_clear(GPIOB, GPIO8);
-      }
-      break;
-    case 2:
-      if (state) {
-        gpio_set(GPIOB, GPIO3);
-      } else {
-        gpio_clear(GPIOB, GPIO3);
-      }
-      break;
-    case 3:
-      if (state) {
-        gpio_set(GPIOD, GPIO2);
-      } else {
-        gpio_clear(GPIOD, GPIO2);
-      }
-      break;
-    case 4:
+    case INFO_LED_1:
       if (state) {
         gpio_set(GPIOB, GPIO14);
       } else {
         gpio_clear(GPIOB, GPIO14);
       }
       break;
-    case 5:
+    case INFO_LED_2:
+      if (state) {
+        gpio_set(GPIOD, GPIO2);
+      } else {
+        gpio_clear(GPIOD, GPIO2);
+      }
+      break;
+    case INFO_LED_3:
+      if (state) {
+        gpio_set(GPIOB, GPIO3);
+      } else {
+        gpio_clear(GPIOB, GPIO3);
+      }
+      break;
+    case INFO_LED_4:
+      if (state) {
+        gpio_set(GPIOB, GPIO8);
+      } else {
+        gpio_clear(GPIOB, GPIO8);
+      }
+      break;
+    case INFO_LED_5:
+      if (state) {
+        gpio_set(GPIOB, GPIO9);
+      } else {
+        gpio_clear(GPIOB, GPIO9);
+      }
+      break;
+    case INFO_LED_A:
       if (state) {
         gpio_set(GPIOB, GPIO0);
       } else {
         gpio_clear(GPIOB, GPIO0);
       }
       break;
-    case 6:
+    case INFO_LED_B:
       if (state) {
         gpio_set(GPIOB, GPIO1);
       } else {
         gpio_clear(GPIOB, GPIO1);
       }
       break;
-    case 7:
+    case INFO_LED_C:
       if (state) {
         gpio_set(GPIOB, GPIO2);
       } else {
         gpio_clear(GPIOB, GPIO2);
       }
       break;
-    case 8:
+    case INFO_LED_D:
       if (state) {
         gpio_set(GPIOB, GPIO12);
       } else {
         gpio_clear(GPIOB, GPIO12);
       }
       break;
-    case 9:
+    case INFO_LED_E:
       if (state) {
         gpio_set(GPIOB, GPIO13);
       } else {

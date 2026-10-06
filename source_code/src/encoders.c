@@ -172,7 +172,7 @@ void update_encoder_readings(void) {
 
   left_ticks = read_encoder_left();
   right_ticks = read_encoder_right();
-  left_diff_ticks = -max_likelihood_counter_diff(left_ticks, last_left_ticks);
+  left_diff_ticks = max_likelihood_counter_diff(left_ticks, last_left_ticks);
   right_diff_ticks = max_likelihood_counter_diff(right_ticks, last_right_ticks);
   left_total_ticks += left_diff_ticks;
   right_total_ticks += right_diff_ticks;

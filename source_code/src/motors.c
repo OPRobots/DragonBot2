@@ -52,34 +52,26 @@ uint16_t get_motor_current_raw(uint8_t index) {
   }
 }
 
-void set_motors_enable(bool enabled) {
-  // if (enabled) {
-  //   gpio_set(GPIOB, GPIO15);
-  // } else {
-  //   gpio_clear(GPIOB, GPIO15);
-  // }
-}
-
-void set_motors_speed(float velI, float velD) {
+void set_motors_speed(int16_t velI, int16_t velD) {
   float ocI = 0;
   float ocD = 0;
 
   ocI = map(abs(velI), 0, 1000, 0, MOTORS_MAX_PWM);
   if (velI > 0) {
-    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - (uint32_t)ocI);
-    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - (uint32_t)ocI);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - (uint32_t)ocI);
-    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - (uint32_t)ocI);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
   }
 
   ocD = map(abs(velD), 0, 1000, 0, MOTORS_MAX_PWM);
   if (velD > 0) {
-    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - (uint32_t)ocD);
-    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - (uint32_t)ocD);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - (uint32_t)ocD);
-    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - (uint32_t)ocD);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
   }
   // printf("%ld - %ld\n", (uint32_t)ocI, (uint32_t)ocD);
 }
