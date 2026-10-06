@@ -86,7 +86,10 @@ static void setup_gpio(void) {
   // Entradas analógicas sensores de línea y batería
   gpio_mode_setup(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3);
   // Entradas analógicas sensores de marcas y corriente
-  gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO6 | GPIO7);
+  gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5);
+
+  // Entradas digitales botones
+  gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO6 | GPIO7);
 
   // Salidas digitales multiplexadores
   gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO13 | GPIO14 | GPIO15);
@@ -265,9 +268,7 @@ void dma2_stream2_isr(void) {
     mark_sensors_update_readings(3, adc2_raw[3]);
     motor_current_update_readings(0, adc2_raw[4]);
     motor_current_update_readings(1, adc2_raw[5]);
-    motor_current_update_readings(2, adc2_raw[6]);
-    motor_current_update_readings(3, adc2_raw[7]);
-    battery_update_readings(adc2_raw[8]);
+    battery_update_readings(adc2_raw[6]);
 
     dma_clear_interrupt_flags(DMA2, DMA_STREAM2, DMA_TCIF);
     // toggle_status_led();

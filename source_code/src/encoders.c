@@ -34,14 +34,14 @@ static volatile int32_t right_wheel_click_ms;
  * @brief Read left motor encoder counter.
  */
 static uint16_t read_encoder_left(void) {
-  return (uint16_t)timer_get_counter(TIM4);
+  return (uint16_t)timer_get_counter(TIM3);
 }
 
 /**
  * @brief Read right motor encoder counter.
  */
 static uint16_t read_encoder_right(void) {
-  return (uint16_t)timer_get_counter(TIM3);
+  return (uint16_t)timer_get_counter(TIM4);
 }
 
 int32_t get_encoder_left_ticks(void) {
@@ -94,7 +94,9 @@ int32_t get_encoder_avg_millimeters(void) {
   return (left_millimeters + right_millimeters) / 2;
 }
 
-void reset_encoder_avg(void) {
+void reset_encoders(void) {
+  left_total_ticks = 0;
+  right_total_ticks = 0;
   left_micrometers = 0;
   right_micrometers = 0;
   avg_micrometers = 0;
@@ -182,26 +184,26 @@ void update_encoder_readings(void) {
   left_millimeters = left_micrometers / MICROMETERS_PER_MILLIMETER;
   right_millimeters = right_micrometers / MICROMETERS_PER_MILLIMETER;
 
-  if (!is_race_started()) {
-    if (abs(left_millimeters) > 10) {
-      left_total_ticks = 0;
-      if (left_millimeters > 0) {
-        left_wheel_click_up = true;
-      } else {
-        left_wheel_click_down = true;
-      }
-      left_wheel_click_ms = get_clock_ticks();
-    }
-    if (abs(right_millimeters) > 10) {
-      right_total_ticks = 0;
-      if (right_millimeters > 0) {
-        right_wheel_click_up = true;
-      } else {
-        right_wheel_click_down = true;
-      }
-      right_wheel_click_ms = get_clock_ticks();
-    }
-  }
+  // if (!is_race_started()) {
+  //   if (abs(left_millimeters) > 10) {
+  //     left_total_ticks = 0;
+  //     if (left_millimeters > 0) {
+  //       left_wheel_click_up = true;
+  //     } else {
+  //       left_wheel_click_down = true;
+  //     }
+  //     left_wheel_click_ms = get_clock_ticks();
+  //   }
+  //   if (abs(right_millimeters) > 10) {
+  //     right_total_ticks = 0;
+  //     if (right_millimeters > 0) {
+  //       right_wheel_click_up = true;
+  //     } else {
+  //       right_wheel_click_down = true;
+  //     }
+  //     right_wheel_click_ms = get_clock_ticks();
+  //   }
+  // }
 
   // left_speed = left_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * SYSTICK_FREQUENCY_HZ;
   // right_speed = right_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * SYSTICK_FREQUENCY_HZ;

@@ -161,7 +161,7 @@ void reset_control_all(void) {
   reset_control_errors();
   reset_control_speed();
   reset_motors_saturated();
-  reset_encoder_avg();
+  reset_encoders();
 }
 
 void set_target_linear_speed(int32_t linear_speed) {

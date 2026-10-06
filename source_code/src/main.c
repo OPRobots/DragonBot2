@@ -1,9 +1,12 @@
 #include "battery.h"
 #include "bmp280.h"
+#include "buttons.h"
+#include "setup.h"
 #include "sram.h"
 
 void sys_tick_handler(void) {
   clock_tick();
+  check_buttons();
   update_battery_voltage();
   update_encoder_readings();
 }
@@ -42,6 +45,8 @@ int main(void) {
     // printf("SRAM Mode: 0x%02X\n", sram_get_mode());
 
     // printf("BMP280 WhoAmI: 0x%02X\n", bmp280_who_am_i());
+
+    printf("SELECT: %d UP: %d DOWN: %d MODE: %d MM: %ld\n", get_menu_select_btn(), get_menu_up_btn(), get_menu_down_btn(), get_menu_mode_btn(), get_encoder_left_millimeters());
     delay(150);
   }
 }
