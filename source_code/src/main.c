@@ -14,7 +14,8 @@ int main(void) {
   eeprom_load();
   handle_robot_version();
   show_battery_level();
-  // sram_init();
+
+  // sram_test();
 
   while (1) {
     // set_status_led(true);

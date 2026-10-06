@@ -108,7 +108,6 @@ static void setup_gpio(void) {
   gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8 | GPIO9 | GPIO10 | GPIO11);
   gpio_set_af(GPIOA, GPIO_AF1, GPIO8 | GPIO9 | GPIO10 | GPIO11);
 
-
   // USART3
   gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10 | GPIO11);
   gpio_set_af(GPIOB, GPIO_AF7, GPIO10 | GPIO11);
@@ -395,6 +394,11 @@ static void setup_mpu(void) {
   lsm6dsr_init();
 }
 
+static void setup_sram(void) {
+  setup_spi_high_speed();
+  sram_init();
+}
+
 /**
  * @brief Setup SPI for gyroscope read, less than 20 MHz.
  *
@@ -434,4 +438,5 @@ void setup(void) {
   setup_main_loop_timer();
   setup_quadrature_encoders();
   setup_mpu();
+  setup_sram();
 }
