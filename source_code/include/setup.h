@@ -18,6 +18,7 @@
 #include "rc5.h"
 #include "sensors.h"
 #include "usart.h"
+#include "sram.h"
 
 void setup(void);
 void setup_spi_high_speed(void);

@@ -145,17 +145,21 @@ uint16_t get_mark_sensor_calibrated(uint8_t index) {
   }
 }
 
-void sensors_calibration(void) {
+void sensors_calibration(bool force) {
   bool use_eeprom_calibration = true;
-  while (!is_right_wheel_click_up()) {
-    if (is_left_wheel_click_down()) {
-      use_eeprom_calibration = !use_eeprom_calibration;
+  if (!force) {
+    while (!get_menu_mode_btn()) {
+      if (get_menu_select_btn()) {
+        use_eeprom_calibration = !use_eeprom_calibration;
+        set_status_led(use_eeprom_calibration);
+        while (get_menu_select_btn()) {
+        }
+      }
       set_status_led(use_eeprom_calibration);
     }
-    set_status_led(use_eeprom_calibration);
   }
 
-  if (use_eeprom_calibration) {
+  if (use_eeprom_calibration && !force) {
     set_status_led(true);
     bool line_sensors_min_checked[get_line_sensor_count()];
     bool line_sensors_max_checked[get_line_sensor_count()];
@@ -234,7 +238,6 @@ void sensors_calibration(void) {
         }
       }
 
-      reset_wheel_clicks();
       if (line_sensors_checked_count == get_line_sensor_count() && mark_sensors_checked_count == get_mark_sensor_count()) {
         break;
       }
@@ -251,7 +254,7 @@ void sensors_calibration(void) {
       set_RGB_color(0, 0, 0);
       clear_info_leds();
     } else {
-      while (!is_right_wheel_click_up()) {
+      while (!get_menu_select_btn()) {
       }
     }
 
@@ -310,10 +313,10 @@ void sensors_calibration(void) {
 
       switch (sensor) {
         case 0:
-          set_info_led(INFO_LED_2, sensor_ok);
+          set_info_led(INFO_LED_5, sensor_ok);
           break;
         case 1:
-          set_info_led(INFO_LED_1, sensor_ok);
+          set_info_led(INFO_LED_4, sensor_ok);
           break;
         case 2:
           set_info_led(INFO_LED_D, sensor_ok);
@@ -332,7 +335,6 @@ void sensors_calibration(void) {
     eeprom_set_data(DATA_INDEX_MARK_SENSORS_MIM, mark_sensors_min, MARK_SENSORS_DATA_LENGTH);
     eeprom_set_data(DATA_INDEX_MARK_SENSORS_THR, mark_sensors_thr, MARK_SENSORS_DATA_LENGTH);
 
-    reset_wheel_clicks();
     if (line_calibration_ok && mark_calibration_ok) {
       set_RGB_color(0, 100, 0);
       delay(500);
@@ -344,11 +346,10 @@ void sensors_calibration(void) {
       } else {
         set_RGB_color(100, 100, 0);
       }
-      while (!is_right_wheel_click_up()) {
+      while (!get_menu_select_btn()) {
         // waiting
       }
     }
-    reset_wheel_clicks();
   }
   set_RGB_color(0, 0, 0);
   sensors_print_calibration();

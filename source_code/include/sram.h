@@ -19,7 +19,7 @@ enum {
 
 typedef struct __attribute__((packed)) {
   uint32_t timestamp_ms;
-  uint16_t line_sensors[LINE_SENSOR_COUNT];
+  uint16_t line_sensors[24];
   int16_t speed_left;
   int16_t speed_right;
   uint8_t battery_pct;

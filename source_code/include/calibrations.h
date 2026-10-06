@@ -15,5 +15,6 @@
 #define CALIBRATE_STORE_EEPROM 3
 
 void calibrate_from_config(uint8_t type);
+bool is_calibration_enabled(void);
 
 #endif

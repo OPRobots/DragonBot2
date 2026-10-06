@@ -43,7 +43,7 @@ static void debug_sensors_calibrated(void) {
 static void debug_all_leds(void) {
   set_RGB_rainbow();
   warning_status_led(125);
-  set_leds_wave(50);
+  set_leds_mpu(50);
 }
 
 static void debug_posicion_correccion(void) {
@@ -91,7 +91,7 @@ static void debug_fans(void) {
 }
 
 static void check_debug_active(void) {
-  if (is_right_wheel_click_down()) {
+  if (get_menu_select_btn()) {
     debug_enabled = !debug_enabled;
     if (!debug_enabled) {
       menu_config_reset_values();

@@ -44,7 +44,7 @@ uint16_t get_mark_sensor_calibrated(uint8_t index);
 bool is_mark_sensor_left(void);
 bool is_mark_sensor_right(void);
 
-void sensors_calibration(void);
+void sensors_calibration(bool force);
 
 void sensors_load_eeprom(void);
 void sensors_print_calibration(void);

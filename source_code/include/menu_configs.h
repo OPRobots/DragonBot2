@@ -3,6 +3,7 @@
 
 #include <calibrations.h>
 #include <config.h>
+#include <buttons.h>
 #include <debug.h>
 #include <leds.h>
 

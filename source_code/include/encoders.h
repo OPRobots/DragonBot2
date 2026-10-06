@@ -31,10 +31,4 @@ float get_encoder_angular_speed(void);
 int32_t max_likelihood_counter_diff(uint16_t now, uint16_t before);
 void update_encoder_readings(void);
 
-bool is_left_wheel_click_up(void);
-bool is_left_wheel_click_down(void);
-bool is_right_wheel_click_up(void);
-bool is_right_wheel_click_down(void);
-void reset_wheel_clicks(void);
-
 #endif

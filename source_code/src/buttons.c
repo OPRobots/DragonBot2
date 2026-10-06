@@ -23,7 +23,7 @@ void check_buttons(void) {
     btn_menu_mode_ms = 0;
   }
 
-  if (!is_race_started() && !menu_run_can_start()) {
+  if (!is_race_started() && !menu_run_can_start() && !is_debug_enabled() && !is_calibration_enabled()) {
     if (get_encoder_left_millimeters() >= 10) {
       btn_menu_down = false;
       btn_menu_up = true;
@@ -47,6 +47,7 @@ bool get_menu_select_btn(void) {
 bool get_menu_up_btn(void) {
   if (btn_menu_up) {
     reset_encoders();
+    btn_menu_up = false;
     return true;
   }
   return false;
@@ -55,6 +56,7 @@ bool get_menu_up_btn(void) {
 bool get_menu_down_btn(void) {
   if (btn_menu_down) {
     reset_encoders();
+    btn_menu_down = false;
     return true;
   }
   return false;

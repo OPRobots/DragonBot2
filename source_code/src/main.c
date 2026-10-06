@@ -12,21 +12,38 @@ void sys_tick_handler(void) {
 }
 
 int main(void) {
-
   setup();
   eeprom_load();
   handle_robot_version();
   show_battery_level();
 
-  // sram_test();
+  while (1) {
 
+    if (!is_race_started()) {
+      menu_handler();
+      if (menu_run_can_start()) {
+
+        if (is_race_started()) {
+          // TODO: espera antes de iniciar
+          // TODO: iniciar run segun tipo de competición
+          // TODO: preparar kinematics
+          // TODO: establecer velocidad ventiladores
+        }
+      }
+    } else {
+      // TODO loop de carrera
+      set_race_started(false);
+    }
+  }
+
+  //? ZONA DEBUG TEMPORAL
   while (1) {
     // set_status_led(true);
     // set_info_leds();
     // set_RGB_rainbow();
     // set_RGB_color(0, 0, 0);
     set_motors_speed(0, 0);
-    set_leds_wave(75);
+    set_leds_mpu(75);
     // set_info_led(INFO_LED_2, true);
     // set_info_led(INFO_LED_B, true);
     // gpio_set(GPIOA, GPIO11);

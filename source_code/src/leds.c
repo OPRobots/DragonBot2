@@ -12,9 +12,13 @@ static uint32_t warning_last_ms = 0;
 static uint32_t rgb_last_blink_ms = 0;
 static bool rgb_blink_state = false;
 
-static uint32_t wave_last_ms = 0;
-static int8_t wave_current_step = 1;
-static uint8_t wave_current_index = 0;
+static uint32_t leds_mpu_last_ms = 0;
+static int8_t leds_mpu_current_step = 1;
+static uint8_t leds_mpu_current_index = 0;
+
+static uint32_t leds_sensors_last_ms = 0;
+static int8_t leds_sensors_current_step = 1;
+static uint8_t leds_sensors_current_index = 0;
 
 static uint32_t blink_last_ms = 0;
 
@@ -93,46 +97,97 @@ void set_RGB_rainbow(void) {
   }
 }
 
-void set_leds_wave(int ms) {
-  if (get_clock_ticks() > wave_last_ms + ms) {
+void set_leds_mpu(uint16_t ms) {
+  if (get_clock_ticks() > leds_mpu_last_ms + ms) {
     gpio_clear(GPIOB, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO8 | GPIO9 | GPIO12 | GPIO13 | GPIO14);
     gpio_clear(GPIOD, GPIO2);
 
-    switch (wave_current_index) {
+    switch (leds_mpu_current_index) {
       case 0:
-        set_info_led(INFO_LED_1, true);
-        set_info_led(INFO_LED_A, true);
-        break;
-      case 1:
-        set_info_led(INFO_LED_2, true);
-        set_info_led(INFO_LED_B, true);
-        break;
-      case 2:
         set_info_led(INFO_LED_3, true);
         set_info_led(INFO_LED_C, true);
         break;
-      case 3:
+      case 1:
         set_info_led(INFO_LED_4, true);
+        set_info_led(INFO_LED_2, true);
         set_info_led(INFO_LED_D, true);
+        set_info_led(INFO_LED_B, true);
+        break;
+      case 2:
+        set_info_led(INFO_LED_5, true);
+        set_info_led(INFO_LED_1, true);
+        set_info_led(INFO_LED_E, true);
+        set_info_led(INFO_LED_A, true);
+        break;
+    }
+
+    if (leds_mpu_current_index >= 2) {
+      leds_mpu_current_step = -1;
+    } else if (leds_mpu_current_index <= 0) {
+      leds_mpu_current_step = 1;
+    }
+
+    leds_mpu_current_index += leds_mpu_current_step;
+    leds_mpu_last_ms = get_clock_ticks();
+  }
+}
+
+void set_leds_sensors(uint16_t ms) {
+  if (get_clock_ticks() > leds_sensors_last_ms + ms) {
+    gpio_clear(GPIOB, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO8 | GPIO9 | GPIO12 | GPIO13 | GPIO14);
+    gpio_clear(GPIOD, GPIO2);
+
+    switch (leds_sensors_current_index) {
+      case 0:
+        set_info_led(INFO_LED_5, true);
+        set_info_led(INFO_LED_4, true);
+        break;
+      case 1:
+        set_info_led(INFO_LED_4, true);
+        set_info_led(INFO_LED_3, true);
+        break;
+      case 2:
+        set_info_led(INFO_LED_3, true);
+        set_info_led(INFO_LED_2, true);
+        break;
+      case 3:
+        set_info_led(INFO_LED_2, true);
+        set_info_led(INFO_LED_1, true);
         break;
       case 4:
-        set_info_led(INFO_LED_5, true);
+        set_info_led(INFO_LED_1, true);
+        set_info_led(INFO_LED_A, true);
+        break;
+      case 5:
+        set_info_led(INFO_LED_A, true);
+        set_info_led(INFO_LED_B, true);
+        break;
+      case 6:
+        set_info_led(INFO_LED_B, true);
+        set_info_led(INFO_LED_C, true);
+        break;
+      case 7:
+        set_info_led(INFO_LED_C, true);
+        set_info_led(INFO_LED_D, true);
+        break;
+      case 8:
+        set_info_led(INFO_LED_D, true);
         set_info_led(INFO_LED_E, true);
         break;
     }
 
-    if (wave_current_index >= 4) {
-      wave_current_step = -1;
-    } else if (wave_current_index <= 0) {
-      wave_current_step = 1;
+    if (leds_sensors_current_index >= 8) {
+      leds_sensors_current_step = -1;
+    } else if (leds_sensors_current_index <= 0) {
+      leds_sensors_current_step = 1;
     }
 
-    wave_current_index += wave_current_step;
-    wave_last_ms = get_clock_ticks();
+    leds_sensors_current_index += leds_sensors_current_step;
+    leds_sensors_last_ms = get_clock_ticks();
   }
 }
 
-void set_leds_blink(int ms) {
+void set_leds_blink(uint16_t ms) {
   if (get_clock_ticks() > blink_last_ms + ms) {
     gpio_toggle(GPIOB, GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO8 | GPIO9 | GPIO12 | GPIO13 | GPIO14);
     gpio_toggle(GPIOD, GPIO2);
@@ -297,7 +352,7 @@ void show_robot_version(uint16_t version) {
       printf("Robot version: Unknown\n");
       uint32_t ms = get_clock_ticks();
       while (get_clock_ticks() - ms < 1000) {
-        set_leds_wave(100);
+        set_leds_mpu(100);
         warning_status_led(100);
       }
       break;

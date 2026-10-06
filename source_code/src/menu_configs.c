@@ -7,7 +7,7 @@ uint8_t modeConfig = MODE_CALIBRATION;
 #define NUM_MODES 2
 
 int8_t valueConfig[NUM_MODES] = {0, 0};
-#define NUM_VALUES_CALIBRATION 4
+#define NUM_VALUES_CALIBRATION 3
 #define NUM_VALUES_DEBUG 10
 
 /**
@@ -34,15 +34,16 @@ static void handle_menu_config_value(void) {
           clear_info_leds();
           break;
         case CALIBRATE_GYRO_Z:
-          set_leds_wave(120);
+          set_leds_mpu(120);
           break;
         case CALIBRATE_SENSORS:
-          set_leds_side_sensors(120);
+          set_leds_sensors(75);
           break;
         case CALIBRATE_STORE_EEPROM:
           set_leds_blink(250);
           break;
       }
+      // printf("valueConfig[modeConfig]: %d\n", valueConfig[modeConfig]);
       calibrate_from_config(valueConfig[modeConfig]);
       break;
     case MODE_DEBUG:
@@ -85,22 +86,31 @@ bool menu_config_handler(void) {
 
   // Comprueba cambios del modo de configuración
   if (valueConfig[modeConfig] == 0) {
-    if (is_right_wheel_click_up()) {
-      modeConfig = (modeConfig + 1) % NUM_MODES;
-      delay(50);
-    }
-
-    if (is_right_wheel_click_down()) {
-      return true;
+    if (get_menu_mode_btn()) {
+      uint32_t ms = get_clock_ticks();
+      while (get_menu_mode_btn()) {
+        if (get_clock_ticks() - ms >= 200) {
+          warning_status_led(50);
+        } else {
+          handle_menu_config_mode();
+        }
+        handle_menu_config_value();
+      };
+      if (get_clock_ticks() - ms >= 200) {
+        return true;
+      } else {
+        modeConfig = (modeConfig + 1) % NUM_MODES;
+        delay(50);
+      }
     }
   }
 
   // Comprueba aumento de valor de configuración
 
-  if (is_left_wheel_click_up()) {
+  if (get_menu_up_btn()) {
     menu_config_up();
   }
-  if (is_left_wheel_click_down()) {
+  if (get_menu_down_btn()) {
     menu_config_down();
   }
   return false;

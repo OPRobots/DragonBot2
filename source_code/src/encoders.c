@@ -23,13 +23,6 @@ static volatile float left_speed;
 static volatile float right_speed;
 static volatile float angular_speed;
 
-static volatile bool left_wheel_click_up;
-static volatile bool left_wheel_click_down;
-static volatile int32_t left_wheel_click_ms;
-static volatile bool right_wheel_click_up;
-static volatile bool right_wheel_click_down;
-static volatile int32_t right_wheel_click_ms;
-
 /**
  * @brief Read left motor encoder counter.
  */
@@ -184,27 +177,6 @@ void update_encoder_readings(void) {
   left_millimeters = left_micrometers / MICROMETERS_PER_MILLIMETER;
   right_millimeters = right_micrometers / MICROMETERS_PER_MILLIMETER;
 
-  // if (!is_race_started()) {
-  //   if (abs(left_millimeters) > 10) {
-  //     left_total_ticks = 0;
-  //     if (left_millimeters > 0) {
-  //       left_wheel_click_up = true;
-  //     } else {
-  //       left_wheel_click_down = true;
-  //     }
-  //     left_wheel_click_ms = get_clock_ticks();
-  //   }
-  //   if (abs(right_millimeters) > 10) {
-  //     right_total_ticks = 0;
-  //     if (right_millimeters > 0) {
-  //       right_wheel_click_up = true;
-  //     } else {
-  //       right_wheel_click_down = true;
-  //     }
-  //     right_wheel_click_ms = get_clock_ticks();
-  //   }
-  // }
-
   // left_speed = left_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * SYSTICK_FREQUENCY_HZ;
   // right_speed = right_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * SYSTICK_FREQUENCY_HZ;
 
@@ -217,43 +189,4 @@ void update_encoder_readings(void) {
 
   last_left_ticks = left_ticks;
   last_right_ticks = right_ticks;
-}
-
-bool is_left_wheel_click_up(void) {
-  if (left_wheel_click_up && get_clock_ticks() - left_wheel_click_ms < 250) {
-    left_wheel_click_up = false;
-    return true;
-  }
-  return false;
-}
-
-bool is_left_wheel_click_down(void) {
-  if (left_wheel_click_down && get_clock_ticks() - left_wheel_click_ms < 250) {
-    left_wheel_click_down = false;
-    return true;
-  }
-  return false;
-}
-
-bool is_right_wheel_click_up(void) {
-  if (right_wheel_click_up && get_clock_ticks() - right_wheel_click_ms < 250) {
-    right_wheel_click_up = false;
-    return true;
-  }
-  return false;
-}
-
-bool is_right_wheel_click_down(void) {
-  if (right_wheel_click_down && get_clock_ticks() - right_wheel_click_ms < 250) {
-    right_wheel_click_down = false;
-    return true;
-  }
-  return false;
-}
-
-void reset_wheel_clicks(void) {
-  left_wheel_click_up = false;
-  left_wheel_click_down = false;
-  right_wheel_click_up = false;
-  right_wheel_click_down = false;
 }

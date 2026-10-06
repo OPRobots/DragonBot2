@@ -20,7 +20,6 @@ int16_t valueRun[MENU_RUN_NUM_MODES] = {0, 0, 0, 1, 1, 1};
 uint32_t lastBlinkMs = 0;
 bool blinkState = false;
 
-#ifndef MMSIM_ENABLED
 static void handle_menu_run_values(void) {
   if (get_clock_ticks() - lastBlinkMs >= 125) {
     lastBlinkMs = get_clock_ticks();
@@ -122,35 +121,35 @@ static void handle_menu_run_values(void) {
 }
 
 static void handle_menu_run_btn(void) {
-  if (is_left_wheel_click_up()) {
+  if (get_menu_up_btn()) {
     menu_run_up();
   }
-  if (is_left_wheel_click_down()) {
+  if (get_menu_down_btn() || (modeRun == MODE_RACE && get_menu_select_btn())) {
     menu_run_down();
   }
 }
-#endif
 
 bool menu_run_handler(void) {
-#ifndef MMSIM_ENABLED
   set_status_led(false);
 
-  if (is_right_wheel_click_up()) {
-    if (modeRun != MODE_RACE || !valueRun[MODE_RACE]) {
+  if (get_menu_mode_btn()) {
+    uint32_t ms = get_clock_ticks();
+    while (get_menu_mode_btn()) {
+      if (get_clock_ticks() - ms >= 200) {
+        warning_status_led(50);
+      }
+    }
+    if (get_clock_ticks() - ms >= 200) {
+      return true;
+    } else if (modeRun != MODE_RACE || !valueRun[MODE_RACE]) {
       menu_run_mode_change();
-    } else if (modeRun == MODE_RACE) {
-      set_status_led(false);
     } else {
       set_status_led(false);
     }
   }
-  if (is_right_wheel_click_down()) {
-    return true;
-  }
 
   handle_menu_run_btn();
   handle_menu_run_values();
-#endif
   return false;
 }
 
@@ -160,13 +159,11 @@ void menu_run_reset(void) {
 }
 
 void menu_run_load_values(void) {
-#ifndef MMSIM_ENABLED
   int16_t *data = eeprom_get_data();
   for (uint16_t i = DATA_INDEX_MENU; i < (DATA_INDEX_MENU + MENU_RUN_NUM_MODES); i++) {
     valueRun[i - DATA_INDEX_MENU] = data[i];
   }
   valueRun[MODE_RACE] = 0;
-#endif
 }
 
 void menu_run_mode_change() {
@@ -174,7 +171,6 @@ void menu_run_mode_change() {
 }
 
 void menu_run_up() {
-#ifndef MMSIM_ENABLED
   uint8_t mode_values = 0;
   switch (modeRun) {
     case MODE_SPEED:
@@ -202,7 +198,6 @@ void menu_run_up() {
     eeprom_set_data(DATA_INDEX_MENU, valueRun, MENU_RUN_NUM_MODES);
     eeprom_save();
   }
-#endif
 }
 
 void menu_run_down() {
