@@ -10,7 +10,7 @@ uint32_t read_cycle_counter(void) {
   return dwt_read_cycle_counter();
 }
 
-uint32_t get_us_counter(void){
+uint32_t get_us_counter(void) {
   return dwt_read_cycle_counter() / (SYSCLK_FREQUENCY_HZ / MICROSECONDS_PER_SECOND);
 }
 
@@ -22,6 +22,10 @@ void delay(uint32_t ms) {
 }
 
 uint32_t get_clock_ticks(void) {
+  return clock_ticks;
+}
+
+uint32_t get_log_timestamp(void) {
   return clock_ticks;
 }
 

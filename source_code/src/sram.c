@@ -198,7 +198,7 @@ void sram_iterator_init(sram_iterator_t *iterator, sram_record_type_t type) {
   iterator->_remaining = (header.magic == SRAM_MAGIC) ? header.num_records : 0;
 }
 
-bool sram_iter_next(sram_iterator_t *iterator, void *buf, uint16_t buf_size, uint16_t *out_size) {
+bool sram_iter_next(sram_iterator_t *iterator, void *buf, uint16_t buf_size, uint16_t *out_size, sram_record_type_t *out_type) {
   while (iterator->_remaining > 0) {
     sram_record_wrap_t record;
     sram_read_bytes(iterator->_pos, &record, (uint16_t)sizeof(record));
@@ -214,6 +214,9 @@ bool sram_iter_next(sram_iterator_t *iterator, void *buf, uint16_t buf_size, uin
     if ((iterator->filter == SRAM_TYPE_ANY) || ((sram_record_type_t)record.type == iterator->filter)) {
       if (out_size != NULL) {
         *out_size = record.payload_size;
+      }
+      if (out_type != NULL) {
+        *out_type = (sram_record_type_t)record.type;
       }
       if (buf != NULL && buf_size > 0) {
         uint16_t copy = (record.payload_size < buf_size) ? record.payload_size : buf_size;
@@ -249,7 +252,7 @@ uint16_t sram_count_records(sram_record_type_t type) {
   sram_iterator_init(&iterator, type);
 
   uint16_t dummy_size;
-  while (sram_iter_next(&iterator, NULL, 0, &dummy_size)) {
+  while (sram_iter_next(&iterator, NULL, 0, &dummy_size, NULL)) {
     count++;
   }
   return count;
@@ -266,34 +269,41 @@ char *sram_free_bytes(void) {
   return buf;
 }
 
-// void sram_test(void) {
-//   for (uint8_t i = 0; i < 5; i++) {
-//     sensor_log_t log = {
-//         .timestamp_ms = get_clock_ticks(),
-//         .line_sensors = {i * 100u, i * 200u, i * 300u, i * 400u},
-//         .speed_left = (int16_t)(100 + i * 10),
-//         .speed_right = (int16_t)(100 - i * 10),
-//         .battery_pct = (uint8_t)(80 - i),
-//     };
-//     sram_write_record(SRAM_TYPE_SENSOR, &log, sizeof(log));
-//     delay(10);
-//   }
+static void sram_print_control_log(const void *data, uint16_t size) {
+  if (size != sizeof(control_log_t)) {
+    printf("ERROR  [control size mismatch %u vs %u]\n", size, (uint16_t)sizeof(control_log_t));
+    return;
+  }
+  const control_log_t *log = (const control_log_t *)data;
+  printf("t=%ld,target_linear_speed=%d,ideal_linear_speed=%d,measured_linear_speed=%.2f,left_measured_linear_speed=%.2f,right_measured_linear_speed=%.2f,ideal_angular_speed=%.2f,measured_angular_speed=%.2f,pwm_left=%d,pwm_right=%d,battery_voltage=%d\n", log->timestamp_ms,
+         (int)log->target_linear_speed, (int)log->ideal_linear_speed, log->measured_linear_speed, log->left_measured_linear_speed,
+         log->right_measured_linear_speed, log->ideal_angular_speed, log->measured_angular_speed, log->pwm_left, log->pwm_right,
+         log->battery_voltage);
+}
 
-//   printf("Total records: %u\n", sram_get_total_records());
-//   printf("  SENSOR : %u\n", sram_count_records(SRAM_TYPE_SENSOR));
+void sram_print_logs(sram_record_type_t type) {
 
-//   sram_iterator_t iterator;
+  printf("sram_print_logs (%d)\n", sram_count_records(type));
 
-//   printf("\n-- Sensor logs --\n");
-//   sram_iterator_init(&iterator, SRAM_TYPE_SENSOR);
+  // sram_iterator_t iterator;
+  // sram_iterator_init(&iterator, type);
 
-//   sensor_log_t log;
-//   uint16_t stored_size;
-//   while (sram_iter_next(&iterator, &log, sizeof(log), &stored_size)) {
-//     if (stored_size != sizeof(log)) {
-//       printf("  [skipped - size mismatch %u vs %u]\n", stored_size, (uint16_t)sizeof(log));
-//       continue;
-//     }
-//     printf("  t=%lums  L=%d R=%d  bat=%u%%\n", log.timestamp_ms, (int)log.speed_left, (int)log.speed_right, log.battery_pct);
-//   }
-// }
+  // sram_log_t buffer;
+
+  // uint16_t stored_size;
+  // sram_record_type_t rec_type;
+  // while (sram_iter_next(&iterator, &buffer, sizeof(buffer), &stored_size, &rec_type)) {
+  //   if (stored_size > sizeof(buffer)) {
+  //     printf("ERROR  [truncated type 0x%02X: %u bytes > buffer %u]\n", rec_type, stored_size, (uint16_t)sizeof(buffer));
+  //     continue;
+  //   }
+  //   switch (rec_type) {
+  //     case SRAM_TYPE_CONTROL:
+  //       sram_print_control_log(&buffer.control, stored_size);
+  //       break;
+  //     default:
+  //       printf("ERROR  [unknown type 0x%02X, %u bytes]\n", rec_type, stored_size);
+  //       break;
+  //   }
+  // }
+}

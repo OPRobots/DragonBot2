@@ -11,6 +11,7 @@
 #include "macroarray.h"
 #include "motors.h"
 #include "sensors.h"
+#include "sram.h"
 #include "usart.h"
 
 #define DEBUG_NONE 0

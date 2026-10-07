@@ -23,16 +23,17 @@ static volatile float angular_error;
 static volatile float sum_angular_error;
 static volatile float last_angular_error;
 
-static volatile bool sensors_correction_enabled = false;
+static volatile bool angular_correction_enabled = false;
+static volatile bool line_sensors_correction_enabled = false;
 
-static volatile float sensors_error;
-static volatile float last_sensors_error;
-static volatile float sum_sensors_error;
+static volatile float line_sensors_error;
+static volatile float last_line_sensors_error;
+static volatile float sum_line_sensors_error;
 
 static volatile float voltage_left;
 static volatile float voltage_right;
-static volatile int32_t pwm_left;
-static volatile int32_t pwm_right;
+static volatile int16_t pwm_left;
+static volatile int16_t pwm_right;
 
 /**
  * @brief Convierte un valor de voltaje dado a su correspondiente PWM
@@ -40,7 +41,7 @@ static volatile int32_t pwm_right;
  * @param voltage
  * @return int32_t PWM a aplicar al motor
  */
-static int32_t voltage_to_motor_pwm(float voltage) {
+static int16_t voltage_to_motor_pwm(float voltage) {
   return voltage / get_battery_voltage() * MOTORS_MAX_PWM;
 }
 
@@ -58,11 +59,13 @@ static void update_ideal_linear_speed(void) {
     if (get_kinematics().linear_accel.speed_hard == 0 || ideal_linear_speed < get_kinematics().linear_accel.speed_hard) {
       accel = get_kinematics().linear_accel.accel_hard;
     }
+    // printf("target: %ld ideal: %ld accel: %d\n", target_linear_speed, ideal_linear_speed, accel);
     ideal_linear_speed += accel / CONTROL_FREQUENCY_HZ;
     if (ideal_linear_speed > target_linear_speed) {
       ideal_linear_speed = target_linear_speed;
     }
   } else if (ideal_linear_speed > target_linear_speed) {
+    // printf("target: %ld ideal: %ld accel: %d\n", target_linear_speed, ideal_linear_speed, get_kinematics().linear_accel.break_accel);
     ideal_linear_speed -= get_kinematics().linear_accel.break_accel / CONTROL_FREQUENCY_HZ;
     if (ideal_linear_speed < target_linear_speed) {
       ideal_linear_speed = target_linear_speed;
@@ -126,14 +129,18 @@ int8_t check_start_run(void) {
   return -1;
 }
 
-void set_sensors_correction(bool enabled) {
-  sensors_correction_enabled = enabled;
+void set_angular_correction_enabled(bool enabled) {
+  angular_correction_enabled = enabled;
+}
+
+void set_line_sensors_correction_enabled(bool enabled) {
+  line_sensors_correction_enabled = enabled;
 }
 
 void reset_control_errors(void) {
-  sensors_error = 0;
-  sum_sensors_error = 0;
-  last_sensors_error = 0;
+  line_sensors_error = 0;
+  sum_line_sensors_error = 0;
+  last_line_sensors_error = 0;
 
   linear_error = 0;
   last_linear_error = 0;
@@ -196,24 +203,20 @@ void set_target_fan_speed(int32_t fan_speed, int32_t ms) {
  *
  */
 void control_loop(void) {
-  // gpio_set(GPIOB, GPIO13);
-  // delay_us(100);
-  // gpio_clear(GPIOB, GPIO13);
-  return;
   if (is_debug_enabled()) {
     return;
   }
-  if ((is_motor_pwm_saturated() || is_motor_angle_saturated()) && is_race_started()) {
-    set_motors_speed(0, 0);
-    set_fan_speed(0);
-    if (get_clock_ticks() - get_motors_saturated_ms() < 3000) {
-      blink_RGB_color(is_motor_pwm_saturated() ? 255 : 0, 0, is_motor_angle_saturated() ? 255 : 0, 50);
-    } else {
-      set_RGB_color(0, 0, 0);
-      set_race_started(false);
-    }
-    return;
-  }
+  // if ((is_motor_pwm_saturated() || is_motor_angle_saturated()) && is_race_started()) {
+  //   set_motors_speed(0, 0);
+  //   set_fan_speed(0);
+  //   if (get_clock_ticks() - get_motors_saturated_ms() < 3000) {
+  //     blink_RGB_color(is_motor_pwm_saturated() ? 255 : 0, 0, is_motor_angle_saturated() ? 255 : 0, 50);
+  //   } else {
+  //     set_RGB_color(0, 0, 0);
+  //     set_race_started(false);
+  //   }
+  //   return;
+  // }
   if (!is_race_started()) {
     if (race_finish_ms > 0 && get_clock_ticks() - race_finish_ms <= 3000) {
       set_motors_brake();
@@ -235,61 +238,100 @@ void control_loop(void) {
   linear_error = ideal_linear_speed - get_measured_linear_speed();
   sum_linear_error += linear_error;
 
-  last_angular_error = angular_error;
-  angular_error = ideal_angular_speed - get_measured_angular_speed();
-  sum_angular_error += angular_error;
-
-  sensors_error = 0;
-  if (sensors_correction_enabled) {
-    sensors_error += get_line_sensor_position();
-    sum_sensors_error += sensors_error;
+  if (angular_correction_enabled) {
+    last_angular_error = angular_error;
+    angular_error = ideal_angular_speed - get_measured_angular_speed();
+    sum_angular_error += angular_error;
   }
 
-  linear_voltage = KP_LINEAR * linear_error + KI_LINEAR * sum_linear_error + KD_LINEAR * (linear_error - last_linear_error);
+  if (line_sensors_correction_enabled) {
+    last_line_sensors_error = line_sensors_error;
+    line_sensors_error = get_line_sensor_position();
+    sum_line_sensors_error += line_sensors_error;
+  }
+
+  linear_voltage =
+      get_kinematics().kpi[KPI_LINEAR].kp * linear_error +
+      get_kinematics().kpi[KPI_LINEAR].kd * sum_linear_error +
+      get_kinematics().kpi[KPI_LINEAR].ki * (linear_error - last_linear_error);
 
   angular_voltage =
-      KP_ANGULAR * angular_error + KI_ANGULAR * sum_angular_error + KD_ANGULAR * (angular_error - last_angular_error) +
-      KP_LINE_SENSORS * sensors_error + KI_LINE_SENSORS * sum_sensors_error + KD_LINE_SENSORS * (sensors_error - last_sensors_error);
+      get_kinematics().kpi[KPI_ANGULAR].kp * angular_error +
+      get_kinematics().kpi[KPI_ANGULAR].kd * sum_angular_error +
+      get_kinematics().kpi[KPI_ANGULAR].ki * (angular_error - last_angular_error) +
 
-  last_sensors_error = sensors_error;
+      get_kinematics().kpi[KPI_LINE_SENSORS].kp * line_sensors_error +
+      get_kinematics().kpi[KPI_LINE_SENSORS].kd * sum_line_sensors_error +
+      get_kinematics().kpi[KPI_LINE_SENSORS].ki * (line_sensors_error - last_line_sensors_error);
 
   voltage_left = linear_voltage + angular_voltage;
   voltage_right = linear_voltage - angular_voltage;
   pwm_left = voltage_to_motor_pwm(voltage_left);
   pwm_right = voltage_to_motor_pwm(voltage_right);
-  set_motors_pwm(pwm_left, pwm_right);
+  // set_motors_pwm(pwm_left, pwm_right);
 
   if (ideal_linear_speed != 0 || ideal_angular_speed != 0) {
+
+    // static char *labels[] = {
+    //         "target_linear_speed",
+    //         "ideal_linear_speed",
+    //         "measured_linear_speed",
+    //         "measured_left_speed",
+    //         "measured_right_speed",
+    //         "ideal_angular_speed",
+    //         "measured_angular_speed",
+    //         "pwm_left",
+    //         "pwm_right",
+    //         // "encoder_avg_millimeters",
+    //         "sensors_error",
+    //         "battery_voltage"};
+    //     macroarray_store(
+    //         5,
+    //         0b00000110011,
+    //         labels,
+    //         11,
+    //         (int16_t)target_linear_speed,
+    //         (int16_t)ideal_linear_speed,
+    //         (int16_t)(get_measured_linear_speed()),
+    //         (int16_t)(get_encoder_left_speed()),
+    //         (int16_t)(get_encoder_right_speed()),
+    //         (int16_t)(ideal_angular_speed * 100),
+    //         (int16_t)(get_measured_angular_speed() * 100),
+    //         (int16_t)pwm_left,
+    //         (int16_t)pwm_right,
+    //         // (int16_t)get_encoder_avg_millimeters(),
+    //         (int16_t)(line_sensors_error * 100),
+    //         (int16_t)(get_battery_voltage() * 100));
+
+    uint32_t sram_start_write = read_cycle_counter();
+
+    control_log_t log = {
+        .timestamp_ms = get_log_timestamp(),
+        .target_linear_speed = target_linear_speed,
+        .ideal_linear_speed = ideal_linear_speed,
+        .measured_linear_speed = get_measured_linear_speed(),
+        .left_measured_linear_speed = get_encoder_left_speed(),
+        .right_measured_linear_speed = get_encoder_right_speed(),
+        .ideal_angular_speed = ideal_angular_speed,
+        .measured_angular_speed = get_measured_angular_speed(),
+        .pwm_left = pwm_left,
+        .pwm_right = pwm_right,
+        .battery_voltage = get_battery_voltage(),
+    };
+    sram_write_record(SRAM_TYPE_CONTROL, &log, sizeof(log));
+
+    printf("c: %ld\n", (read_cycle_counter() - sram_start_write));
+
     static char *labels[] = {
-        "target_linear_speed",
-        "ideal_linear_speed",
-        "measured_linear_speed",
-        "measured_left_speed",
-        "measured_right_speed",
-        "ideal_angular_speed",
-        "measured_angular_speed",
-        "pwm_left",
-        "pwm_right",
-        // "encoder_avg_millimeters",
-        "sensors_error",
-        "battery_voltage"};
+        "sram_write_us",
+    };
     macroarray_store(
-        5,
-        0b00000110011,
+        0,
+        0b0,
         labels,
-        11,
-        (int16_t)target_linear_speed,
-        (int16_t)ideal_linear_speed,
-        (int16_t)(get_measured_linear_speed()),
-        (int16_t)(get_encoder_left_speed()),
-        (int16_t)(get_encoder_right_speed()),
-        (int16_t)(ideal_angular_speed * 100),
-        (int16_t)(get_measured_angular_speed() * 100),
-        (int16_t)pwm_left,
-        (int16_t)pwm_right,
-        // (int16_t)get_encoder_avg_millimeters(),
-        (int16_t)(sensors_error * 100),
-        (int16_t)(get_battery_voltage() * 100));
+        1,
+        (int16_t)(read_cycle_counter() - sram_start_write));
+
   }
 }
 

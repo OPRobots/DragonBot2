@@ -57,14 +57,10 @@ static void setup_timer_priorities(void) {
   nvic_set_priority(NVIC_SYSTICK_IRQ, 16 * 0);
   nvic_set_priority(NVIC_DMA2_STREAM0_IRQ, 16 * 1);
   nvic_set_priority(NVIC_DMA2_STREAM2_IRQ, 16 * 2);
-  nvic_set_priority(NVIC_TIM2_IRQ, 16 * 3);
-  nvic_set_priority(NVIC_TIM5_IRQ, 16 * 4);
-  nvic_set_priority(NVIC_USART3_IRQ, 16 * 5);
+  nvic_set_priority(NVIC_USART3_IRQ, 16 * 3);
 
   nvic_enable_irq(NVIC_DMA2_STREAM0_IRQ);
   nvic_enable_irq(NVIC_DMA2_STREAM2_IRQ);
-  nvic_enable_irq(NVIC_TIM5_IRQ);
-  nvic_enable_irq(NVIC_TIM2_IRQ);
   nvic_enable_irq(NVIC_USART3_IRQ);
   nvic_enable_irq(NVIC_EXTI15_10_IRQ);
 }
@@ -329,25 +325,6 @@ static void setup_motors_pwm(void) {
   timer_enable_counter(TIM1);
 }
 
-static void setup_main_loop_timer(void) {
-  rcc_periph_reset_pulse(RST_TIM5);
-  timer_set_mode(TIM5, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
-  timer_set_prescaler(TIM5, ((rcc_apb1_frequency * 2) / 1000000 - 2));
-  timer_disable_preload(TIM5);
-  timer_continuous_mode(TIM5);
-  timer_set_period(TIM5, 1024);
-
-  timer_enable_counter(TIM5);
-  // timer_enable_irq(TIM5, TIM_DIER_CC1IE);
-}
-
-void tim5_isr(void) {
-  if (timer_get_flag(TIM5, TIM_SR_CC1IF)) {
-    timer_clear_flag(TIM5, TIM_SR_CC1IF);
-    control_loop();
-  }
-}
-
 static void setup_quadrature_encoders(void) {
   timer_set_period(TIM4, 0xFFFF);
   timer_slave_set_mode(TIM4, TIM_SMCR_SMS_EM3);
@@ -408,7 +385,7 @@ static void setup_sram(void) {
  * Reference: https://github.com/Bulebots/meiga
  */
 void setup_spi_high_speed(void) {
-  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_8);
+  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_2);
   delay(100);
 }
 
@@ -420,13 +397,12 @@ void setup_spi_high_speed(void) {
  * Reference: https://github.com/Bulebots/meiga
  */
 void setup_spi_low_speed(void) {
-  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_128);
+  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_16);
   delay(100);
 }
 
 void setup(void) {
   setup_clock();
-  setup_systick();
   setup_timer_priorities();
   setup_usart();
   setup_gpio();
@@ -436,8 +412,8 @@ void setup(void) {
   setup_adc1();
   setup_leds_pwm();
   setup_motors_pwm();
-  setup_main_loop_timer();
   setup_quadrature_encoders();
+  setup_systick();
   setup_mpu();
   setup_sram();
 }

@@ -21,7 +21,9 @@ void set_race_started(bool state);
 int8_t check_start_run(void);
 void set_control_debug(bool state);
 
-void set_sensors_correction(bool enabled);
+void set_angular_correction_enabled(bool enabled);
+void set_line_sensors_correction_enabled(bool enabled);
+
 void reset_control_errors(void);
 void reset_control_speed(void);
 void reset_control_all(void);

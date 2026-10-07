@@ -113,7 +113,10 @@ void debug_from_config(uint8_t type) {
     set_RGB_color(0, 50, 0);
     switch (type) {
       case DEBUG_MACROARRAY:
-        debug_macroarray();
+      debug_macroarray();
+      sram_print_logs(SRAM_TYPE_ANY);
+        // debug_enabled = false;
+        // menu_config_reset_values();
         break;
       case DEBUG_TYPE_SENSORS_RAW:
         debug_sensors_raw();
