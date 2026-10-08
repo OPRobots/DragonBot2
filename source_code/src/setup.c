@@ -34,7 +34,6 @@ static void setup_clock(void) {
   rcc_periph_clock_enable(RCC_TIM2);
   rcc_periph_clock_enable(RCC_TIM3);
   rcc_periph_clock_enable(RCC_TIM4);
-  rcc_periph_clock_enable(RCC_TIM5);
   rcc_periph_clock_enable(RCC_TIM8);
 
   rcc_periph_clock_enable(RCC_ADC1);
@@ -43,18 +42,7 @@ static void setup_clock(void) {
   dwt_enable_cycle_counter();
 }
 
-/**
- * @brief Configura el SysTick para 1ms
- *
- */
-static void setup_systick(void) {
-  systick_set_frequency(SYSTICK_FREQUENCY_HZ, SYSCLK_FREQUENCY_HZ);
-  systick_counter_enable();
-  systick_interrupt_enable();
-}
-
 static void setup_timer_priorities(void) {
-  nvic_set_priority(NVIC_SYSTICK_IRQ, 16 * 0);
   nvic_set_priority(NVIC_DMA2_STREAM0_IRQ, 16 * 1);
   nvic_set_priority(NVIC_DMA2_STREAM2_IRQ, 16 * 2);
   nvic_set_priority(NVIC_USART3_IRQ, 16 * 3);
@@ -390,15 +378,37 @@ void setup_spi_high_speed(void) {
 }
 
 /**
- * @brief Setup SPI for gyroscope Write, less than 1 MHz.
+ * @brief Setup SPI a velocidad lenta para el BMP280 (máx. 10 MHz).
  *
- * The clock baudrate is 84 MHz / 128 = 0.65625 MHz.
+ * SPI3 cuelga de APB1 (42 MHz), por lo que DIV_8 da 5.25 MHz.
  *
  * Reference: https://github.com/Bulebots/meiga
  */
 void setup_spi_low_speed(void) {
-  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_16);
+  setup_spi(SPI_CR1_BAUDRATE_FPCLK_DIV_8);
   delay(100);
+}
+
+#define SPI_CR1_BR_MASK (0x07u << 3)
+
+/**
+ * @brief Cambia el prescaler del SPI3 en caliente, sin resetear el periférico.
+ *
+ * El bitrate se configura con el SPI deshabilitado (SPE=0), como pide el
+ * manual. Pensado para conmutar BMP280 <-> MPU/SRAM dentro de su slot.
+ */
+static void spi_set_baudrate(uint8_t speed_div) {
+  spi_disable(SPI3);
+  SPI_CR1(SPI3) = (SPI_CR1(SPI3) & ~SPI_CR1_BR_MASK) | speed_div;
+  spi_enable(SPI3);
+}
+
+void spi_set_baudrate_fast(void) {
+  spi_set_baudrate(SPI_CR1_BAUDRATE_FPCLK_DIV_2);
+}
+
+void spi_set_baudrate_slow(void) {
+  spi_set_baudrate(SPI_CR1_BAUDRATE_FPCLK_DIV_8);
 }
 
 void setup(void) {
@@ -413,7 +423,7 @@ void setup(void) {
   setup_leds_pwm();
   setup_motors_pwm();
   setup_quadrature_encoders();
-  setup_systick();
+  sys_tick_init();
   setup_mpu();
   setup_sram();
 }

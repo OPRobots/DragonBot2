@@ -1,5 +1,7 @@
 #include "bmp280.h"
 
+#include "sram.h"
+
 #define BMP280_CHIPID 0xD0
 
 static void bmp280_select(void) {
@@ -26,5 +28,11 @@ static void bmp280_write_reg(uint8_t reg, uint8_t value) {
 }
 
 uint8_t bmp280_who_am_i(void) {
-  return bmp280_read_reg(BMP280_CHIPID);
+  bool was_paused = sram_log_is_paused();
+  sram_log_set_paused(true);
+
+  uint8_t id = bmp280_read_reg(BMP280_CHIPID);
+
+  sram_log_set_paused(was_paused);
+  return id;
 }

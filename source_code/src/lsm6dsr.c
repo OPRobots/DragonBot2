@@ -143,10 +143,13 @@ void lsm6dsr_init(void) {
 
 void lsm6dsr_reload_config(void) {
   if (current_full_scale_dps != get_kinematics().mpu.full_scale_dps) {
+    bool was_paused = sram_log_is_paused();
+    sram_log_set_paused(true);
     lsm6dsr_gy_full_scale_set(&dev_ctx, get_kinematics().mpu.full_scale_dps);
     current_full_scale_dps = get_kinematics().mpu.full_scale_dps;
     delay(50);
     reset_control_all();
+    sram_log_set_paused(was_paused);
   }
 }
 
@@ -155,6 +158,9 @@ uint8_t lsm6dsr_who_am_i(void) {
 }
 
 void lsm6dsr_gyro_z_calibration(void) {
+  bool was_paused = sram_log_is_paused();
+  sram_log_set_paused(true);
+
   mpu_updating = false;
   int16_t eeprom_data[MPU_FULL_SCALE_COUNT];
 
@@ -180,6 +186,8 @@ void lsm6dsr_gyro_z_calibration(void) {
   lsm6dsr_gy_full_scale_set(&dev_ctx, current_full_scale_dps);
   delay(100);
   mpu_updating = true;
+
+  sram_log_set_paused(was_paused);
 }
 
 void lsm6dsr_load_eeprom(void) {

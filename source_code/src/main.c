@@ -4,44 +4,14 @@
 #include "setup.h"
 #include "sram.h"
 
-void sys_tick_handler(void) {
-  static uint8_t tick_count = 0;
-
-  switch (tick_count) {
-    case 0:
-      clock_tick();
-      break;
-    case 1:
-      check_buttons();
-      break;
-
-
-    case 11:
-      update_battery_voltage();
-      break;
-    case 12:
-      update_encoder_readings();
-      break;
-    case 13:
-      // lsm6dsr_update();
-      break;
-    case 14:
-      control_loop();
-      break;
-    case 15:
-      // TODO: sram_store();
-      break;
-  }
-
-  tick_count = (tick_count + 1) % 16;
-}
-
 int main(void) {
   setup();
   eeprom_load();
   handle_robot_version();
   show_battery_level();
-configure_kinematics(menu_run_get_speed());
+
+  configure_kinematics(menu_run_get_speed());
+
   while (1) {
 
     // printf("z-rad/s: %7.4f z-angle: %5.2f\n", lsm6dsr_get_gyro_z_radps(), lsm6dsr_get_gyro_z_degrees());
@@ -52,7 +22,7 @@ configure_kinematics(menu_run_get_speed());
 
         if (is_race_started()) {
           set_RGB_color(0, 0, 0);
-          setup_spi_low_speed();
+          clear_info_leds();
           delay(100);
 
           configure_kinematics(menu_run_get_speed());

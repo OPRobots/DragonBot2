@@ -303,8 +303,6 @@ void control_loop(void) {
     //         (int16_t)(line_sensors_error * 100),
     //         (int16_t)(get_battery_voltage() * 100));
 
-    uint32_t sram_start_write = read_cycle_counter();
-
     control_log_t log = {
         .timestamp_ms = get_log_timestamp(),
         .target_linear_speed = target_linear_speed,
@@ -318,20 +316,7 @@ void control_loop(void) {
         .pwm_right = pwm_right,
         .battery_voltage = get_battery_voltage(),
     };
-    sram_write_record(SRAM_TYPE_CONTROL, &log, sizeof(log));
-
-    printf("c: %ld\n", (read_cycle_counter() - sram_start_write));
-
-    static char *labels[] = {
-        "sram_write_us",
-    };
-    macroarray_store(
-        0,
-        0b0,
-        labels,
-        1,
-        (int16_t)(read_cycle_counter() - sram_start_write));
-
+    sram_log(SRAM_TYPE_CONTROL, &log, sizeof(log));
   }
 }
 

@@ -17,11 +17,14 @@
 #include "lsm6dsr.h"
 #include "rc5.h"
 #include "sensors.h"
-#include "usart.h"
 #include "sram.h"
+#include "sys_tick.h"
+#include "usart.h"
 
 void setup(void);
 void setup_spi_high_speed(void);
 void setup_spi_low_speed(void);
+void spi_set_baudrate_fast(void);
+void spi_set_baudrate_slow(void);
 
 #endif
