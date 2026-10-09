@@ -97,11 +97,11 @@ void set_motors_pwm(int32_t pwm_left, int32_t pwm_right) {
   }
 
   if (pwm_left >= 0) {
-    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - abs(pwm_left));
-    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - abs(pwm_left));
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - abs(pwm_left));
-    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - abs(pwm_left));
+    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
   }
 
   if (pwm_right > MOTORS_MAX_PWM) {
@@ -117,11 +117,11 @@ void set_motors_pwm(int32_t pwm_left, int32_t pwm_right) {
   }
 
   if (pwm_right >= 0) {
-    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM - abs(pwm_right));
-    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM - abs(pwm_right));
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM);
   } else {
-    timer_set_oc_value(TIM1, TIM_OC1, MOTORS_MAX_PWM - abs(pwm_right));
-    timer_set_oc_value(TIM1, TIM_OC2, MOTORS_MAX_PWM);
+    timer_set_oc_value(TIM1, TIM_OC3, MOTORS_MAX_PWM - abs(pwm_right));
+    timer_set_oc_value(TIM1, TIM_OC4, MOTORS_MAX_PWM);
   }
 
   if (abs(get_encoder_angular_speed()) >= MOTORES_SATURATION_ANGULAR_SPEED) {

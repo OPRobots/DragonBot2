@@ -72,15 +72,11 @@ static void debug_encoders(void) {
 static void debug_motors(void) {
   set_motors_speed(150, 150);
   if (get_clock_ticks() > debug_last_print_ms + 50) {
-    printf("Motor Current: ");
-    for (uint8_t i = 0; i < MOTOR_CURRENT_COUNT; i++) {
-      if (i < MOTOR_CURRENT_COUNT / 2) {
-        printf("L%d: ", i);
-      } else {
-        printf("R%d: ", i - MOTOR_CURRENT_COUNT / 2);
-      }
-      printf("%4d mA  ", get_motor_current_raw(i));
-    }
+    printf("L: %4d mA ", get_motor_current_raw(0));
+    printf("R: %4d mA ", get_motor_current_raw(1));
+    printf(" | ");
+    printf("L: %5.2f m/s ", get_encoder_left_speed());
+    printf("R: %5.2f m/s ", get_encoder_right_speed());
     printf("\n");
     debug_last_print_ms = get_clock_ticks();
   }
@@ -92,6 +88,8 @@ static void debug_fans(void) {
 
 static void check_debug_active(void) {
   if (get_menu_select_btn()) {
+    while (get_menu_select_btn()) {
+    }
     debug_enabled = !debug_enabled;
     if (!debug_enabled) {
       menu_config_reset_values();

@@ -10,10 +10,16 @@ int main(void) {
   handle_robot_version();
   show_battery_level();
 
-  configure_kinematics(menu_run_get_speed());
+  // sensors_calibration(false);
 
   while (1) {
 
+    //     printf("L: %4d mA ", get_motor_current_raw(0));
+    // printf("R: %4d mA ", get_motor_current_raw(1));
+    // printf(" | ");
+    // printf("L: %5.2f m/s ", get_encoder_left_speed());
+    // printf("R: %5.2f m/s ", get_encoder_right_speed());
+    // printf("\n");
     // printf("z-rad/s: %7.4f z-angle: %5.2f\n", lsm6dsr_get_gyro_z_radps(), lsm6dsr_get_gyro_z_degrees());
 
     if (!is_race_started()) {
@@ -21,57 +27,40 @@ int main(void) {
       if (menu_run_can_start()) {
 
         if (is_race_started()) {
+          sram_format();
+          menu_run_reset();
           set_RGB_color(0, 0, 0);
+          set_status_led(false);
           clear_info_leds();
+          configure_kinematics(menu_run_get_speed());
           delay(100);
 
-          configure_kinematics(menu_run_get_speed());
+          uint32_t start_ms = get_clock_ticks();
+          uint16_t elapsed_ms = 5;
+          while (get_clock_ticks() < (start_ms + get_start_millis())) {
+            elapsed_ms = get_clock_ticks() - start_ms;
+            uint8_t r = 0, g = 0;
+            r = map(elapsed_ms, 0, get_start_millis(), 255, 0);
+            g = map(elapsed_ms, 0, 1000, 0, 255);
+            set_RGB_color(r, g, 0);
+            if ((elapsed_ms > get_start_millis() * 0.75 || get_start_millis() == 0) && get_kinematics().fan_speed > 0) {
+              set_target_fan_speed(get_kinematics().fan_speed / 2, 500);
+            }
+          }
+          set_RGB_color(0, 0, 0);
 
-          set_target_linear_speed(500);
-          delay(2000);
+          set_target_linear_speed(get_kinematics().linear_speed);
+          // set_target_fan_speed(get_kinematics().fan_speed, 500);
+          set_line_sensors_correction_enabled(false);
+          delay(250);
           set_target_linear_speed(0);
-          delay(2000);
+          delay(250);
           set_race_started(false);
-          // TODO: espera antes de iniciar
-          // TODO: iniciar run segun tipo de competición
-          // TODO: preparar kinematics
-          // TODO: establecer velocidad ventiladores
         }
       }
     } else {
       // TODO loop de carrera
       set_race_started(false);
     }
-  }
-
-  //? ZONA DEBUG TEMPORAL
-  while (1) {
-    // set_status_led(true);
-    // set_info_leds();
-    // set_RGB_rainbow();
-    // set_RGB_color(0, 0, 0);
-    set_motors_speed(0, 0);
-    // set_leds_mpu(75);
-    // set_info_led(INFO_LED_2, true);
-    // set_info_led(INFO_LED_B, true);
-    // gpio_set(GPIOA, GPIO11);
-    // gpio_clear(GPIOA, GPIO10);
-    // gpio_set(GPIOA, GPIO9);
-    // gpio_clear(GPIOA, GPIO8);
-    // set_fan_speed(0);
-
-    // printf("Battery voltage: %.2f V\n", get_battery_voltage());
-    // debug_from_main(DEBUG_TYPE_SENSORS_RAW);
-    // debug_from_main(DEBUG_TYPE_ENCODERS);
-    // debug_from_main(DEBUG_TYPE_MOTORS);
-    // printf("MPU WhoAmI: 0x%02X\n", lsm6dsr_who_am_i());
-
-    // sram_set_mode();
-    // printf("SRAM Mode: 0x%02X\n", sram_get_mode());
-
-    // printf("BMP280 WhoAmI: 0x%02X\n", bmp280_who_am_i());
-
-    // printf("SELECT: %d UP: %d DOWN: %d MODE: %d MM: %ld\n", get_menu_select_btn(), get_menu_up_btn(), get_menu_down_btn(), get_menu_mode_btn(), get_encoder_left_millimeters());
-    delay(150);
   }
 }

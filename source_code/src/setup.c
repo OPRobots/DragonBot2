@@ -412,6 +412,7 @@ void spi_set_baudrate_slow(void) {
 }
 
 void setup(void) {
+  setup_kinematics();
   setup_clock();
   setup_timer_priorities();
   setup_usart();

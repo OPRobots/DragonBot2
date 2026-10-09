@@ -39,6 +39,7 @@ struct kinematics {
 
 enum speed_strategy;
 
+void setup_kinematics(void);
 void configure_kinematics(enum speed_strategy speed);
 struct kinematics get_kinematics(void);
 

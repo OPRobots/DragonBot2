@@ -13,7 +13,7 @@
 #include "delay.h"
 #include "utils.h"
 
-#define MOTOR_CURRENT_COUNT 4
+#define MOTOR_CURRENT_COUNT 2
 
 void motor_current_update_readings(uint8_t index, uint16_t current);
 uint16_t get_motor_current_raw(uint8_t index);

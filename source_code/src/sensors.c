@@ -246,15 +246,15 @@ void sensors_calibration(bool force) {
 
     if (line_sensors_checked_count == get_line_sensor_count() && mark_sensors_checked_count == get_mark_sensor_count()) {
       set_RGB_color(0, 125, 0);
-      set_info_led(INFO_LED_2, true);
-      set_info_led(INFO_LED_1, true);
+      set_info_led(INFO_LED_4, true);
+      set_info_led(INFO_LED_5, true);
       set_info_led(INFO_LED_D, true);
       set_info_led(INFO_LED_E, true);
       delay(500);
       set_RGB_color(0, 0, 0);
       clear_info_leds();
     } else {
-      while (!get_menu_select_btn()) {
+      while (!get_menu_mode_btn()) {
       }
     }
 
@@ -346,7 +346,7 @@ void sensors_calibration(bool force) {
       } else {
         set_RGB_color(100, 100, 0);
       }
-      while (!get_menu_select_btn()) {
+      while (!get_menu_mode_btn()) {
         // waiting
       }
     }
@@ -383,7 +383,7 @@ void sensors_print_calibration(void) {
   for (int sensor = 0; sensor < get_line_sensor_count(); sensor++) {
     printf("Sensor %2d: %4d <> %4d <> %4d\n", sensor + 1, line_sensors_min[sensor], line_sensors_thr[sensor], line_sensors_max[sensor]);
   }
-  printf("___________________________________________\n");
+  printf("\n");
   for (int sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
     printf("Mark %2d: %4d <> %4d <> %4d\n", sensor + 1, mark_sensors_min[sensor], mark_sensors_thr[sensor], mark_sensors_max[sensor]);
   }

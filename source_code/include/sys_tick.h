@@ -13,8 +13,8 @@
  * cíclica, de modo que cada tarea se ejecuta a 1 kHz en su propio slot.
  */
 typedef enum {
-  SYS_TICK_SLOT_CLOCK = 0,   /* clock_tick() + check_buttons() */
-  SYS_TICK_SLOT_ENCODERS = 1,
+  SYS_TICK_SLOT_CLOCK_BUTTONS = 0,   /* clock_tick() + check_buttons() */
+  SYS_TICK_SLOT_ENCODERS_LINE = 1,
   SYS_TICK_SLOT_MPU_BMP = 2,
   SYS_TICK_SLOT_CONTROL = 3,
   SYS_TICK_SLOT_BATTERY = 4,

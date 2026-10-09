@@ -2,8 +2,8 @@
 
 static struct kpi_params kpi_test[] = {
     [KPI_LINEAR] = {
-        .kp = 0.008,
-        .ki = 0.0005,
+        .kp = 0.003,
+        .ki = 0.0002,
         .kd = 0.00,
     },
     [KPI_ANGULAR] = {
@@ -20,8 +20,8 @@ static struct kpi_params kpi_test[] = {
 
 static struct kpi_params kpi_run[] = {
     [KPI_LINEAR] = {
-        .kp = 0.008,
-        .ki = 0.0005,
+        .kp = 0.003,
+        .ki = 0.0002,
         .kd = 0.00,
     },
     [KPI_ANGULAR] = {
@@ -129,6 +129,10 @@ static struct kinematics kinematics_settings[] = {
     }};
 
 static struct kinematics kinematics;
+
+void setup_kinematics(void) {
+  kinematics = kinematics_settings[SPEED_TEST];
+}
 
 void configure_kinematics(enum speed_strategy speed) {
   kinematics = kinematics_settings[speed];

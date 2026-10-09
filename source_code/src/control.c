@@ -252,23 +252,23 @@ void control_loop(void) {
 
   linear_voltage =
       get_kinematics().kpi[KPI_LINEAR].kp * linear_error +
-      get_kinematics().kpi[KPI_LINEAR].kd * sum_linear_error +
-      get_kinematics().kpi[KPI_LINEAR].ki * (linear_error - last_linear_error);
+      get_kinematics().kpi[KPI_LINEAR].ki * sum_linear_error +
+      get_kinematics().kpi[KPI_LINEAR].kd * (linear_error - last_linear_error);
 
-  angular_voltage =
-      get_kinematics().kpi[KPI_ANGULAR].kp * angular_error +
-      get_kinematics().kpi[KPI_ANGULAR].kd * sum_angular_error +
-      get_kinematics().kpi[KPI_ANGULAR].ki * (angular_error - last_angular_error) +
+  // angular_voltage =
+  //     get_kinematics().kpi[KPI_ANGULAR].kp * angular_error +
+  //     get_kinematics().kpi[KPI_ANGULAR].ki * sum_angular_error +
+  //     get_kinematics().kpi[KPI_ANGULAR].kd * (angular_error - last_angular_error) +
 
-      get_kinematics().kpi[KPI_LINE_SENSORS].kp * line_sensors_error +
-      get_kinematics().kpi[KPI_LINE_SENSORS].kd * sum_line_sensors_error +
-      get_kinematics().kpi[KPI_LINE_SENSORS].ki * (line_sensors_error - last_line_sensors_error);
+  //     get_kinematics().kpi[KPI_LINE_SENSORS].kp * line_sensors_error +
+  //     get_kinematics().kpi[KPI_LINE_SENSORS].ki * sum_line_sensors_error +
+  //     get_kinematics().kpi[KPI_LINE_SENSORS].kd * (line_sensors_error - last_line_sensors_error);
 
   voltage_left = linear_voltage + angular_voltage;
   voltage_right = linear_voltage - angular_voltage;
   pwm_left = voltage_to_motor_pwm(voltage_left);
   pwm_right = voltage_to_motor_pwm(voltage_right);
-  // set_motors_pwm(pwm_left, pwm_right);
+  set_motors_pwm(pwm_left, pwm_right);
 
   if (ideal_linear_speed != 0 || ideal_angular_speed != 0) {
 

@@ -28,16 +28,18 @@ uint8_t sys_tick_get_slot(void) {
 
 void sys_tick_handler(void) {
   switch (sys_tick_slot) {
-    case SYS_TICK_SLOT_CLOCK:
+    case SYS_TICK_SLOT_CLOCK_BUTTONS:
       clock_tick();
       check_buttons();
       break;
-    case SYS_TICK_SLOT_ENCODERS:
+    case SYS_TICK_SLOT_ENCODERS_LINE:
       update_encoder_readings();
+      // line_sensors_update_position();
       break;
     case SYS_TICK_SLOT_MPU_BMP:
       if (!sram_log_is_paused()) {
         lsm6dsr_update();
+        // bmp_update();
       }
       break;
     case SYS_TICK_SLOT_CONTROL:
