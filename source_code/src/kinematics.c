@@ -7,14 +7,14 @@ static struct kpi_params kpi_test[] = {
         .kd = 0.00,
     },
     [KPI_ANGULAR] = {
-        .kp = 0.5,
-        .ki = 0.015,
+        .kp = 0.0,
+        .ki = 0.0,
         .kd = 0.0,
     },
     [KPI_LINE_SENSORS] = {
-        .kp = 0.03,
-        .ki = 0.002,
-        .kd = 0.0,
+        .kp = 0.0025,
+        .ki = 0.0,
+        .kd = 0.03,
     },
 };
 
@@ -25,20 +25,20 @@ static struct kpi_params kpi_run[] = {
         .kd = 0.00,
     },
     [KPI_ANGULAR] = {
-        .kp = 0.5,
-        .ki = 0.015,
+        .kp = 0.0,
+        .ki = 0.0,
         .kd = 0.0,
     },
     [KPI_LINE_SENSORS] = {
-        .kp = 0.03,
-        .ki = 0.002,
+        .kp = 0.0,
+        .ki = 0.0,
         .kd = 0.0,
     },
 };
 
 static struct kinematics kinematics_settings[] = {
     [SPEED_TEST] = {
-        .linear_speed = 650,
+        .linear_speed = 800,
         .linear_accel = {
             .break_accel = 5000,
             .accel_hard = 5000,

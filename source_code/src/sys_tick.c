@@ -34,7 +34,7 @@ void sys_tick_handler(void) {
       break;
     case SYS_TICK_SLOT_ENCODERS_LINE:
       update_encoder_readings();
-      // line_sensors_update_position();
+      line_sensors_update_position();
       break;
     case SYS_TICK_SLOT_MPU_BMP:
       if (!sram_log_is_paused()) {

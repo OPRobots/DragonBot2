@@ -665,6 +665,17 @@ static void sram_print_control_log(const void *data, uint16_t size) {
          log->battery_voltage);
 }
 
+static void sram_print_odometry_log(const void *data, uint16_t size) {
+  if (size != sizeof(odometry_log_t)) {
+    printf("ERROR  [odometry size mismatch %u vs %u]\n", size, (uint16_t)sizeof(odometry_log_t));
+    return;
+  }
+  const odometry_log_t *log = (const odometry_log_t *)data;
+  printf("t=%ld,left_speed=%.2f,right_speed=%.2f,angular_speed=%.2f,left_mm=%ld,right_mm=%ld,pos_x=%.2f,pos_y=%.2f,angle=%.2f\n", log->timestamp_ms,
+         log->left_measured_linear_speed, log->right_measured_linear_speed, log->measured_angular_speed, log->left_millimeters,
+         log->right_millimeters, log->position_x, log->position_y, log->angle);
+}
+
 void sram_print_logs(sram_record_type_t type) {
   bool was_paused = sram_log_is_paused();
   sram_log_set_paused(true);
@@ -688,6 +699,9 @@ void sram_print_logs(sram_record_type_t type) {
     switch (rec_type) {
       case SRAM_TYPE_CONTROL:
         sram_print_control_log(&buffer.control, stored_size);
+        break;
+      case SRAM_TYPE_ODOMETRY:
+        sram_print_odometry_log(&buffer.odometry, stored_size);
         break;
       default:
         printf("ERROR  [unknown type 0x%02X, %u bytes]\n", rec_type, stored_size);

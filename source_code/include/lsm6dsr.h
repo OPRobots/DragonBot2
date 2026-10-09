@@ -38,9 +38,10 @@ void lsm6dsr_load_eeprom(void);
 void lsm6dsr_update(void);
 float lsm6dsr_get_gyro_z_raw(void);
 float lsm6dsr_get_gyro_z_radps(void);
+float lsm6dsr_get_gyro_z_rads(void);
 float lsm6dsr_get_gyro_z_dps(void);
 float lsm6dsr_get_gyro_z_degrees(void);
-void lsm6dsr_set_gyro_z_degrees(float deg);
+void lsm6dsr_reset_gyro_z(void);
 
 float get_offset_z(void);
 uint8_t get_current_full_scale_dps(void);

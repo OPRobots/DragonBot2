@@ -39,6 +39,7 @@ typedef uint8_t sram_record_type_t;
 enum {
   SRAM_TYPE_ANY = 0x00,
   SRAM_TYPE_CONTROL = 0x01,
+  SRAM_TYPE_ODOMETRY = 0x02,
   /* ── USER TYPES (0x03 – 0xFE) ── */
   SRAM_TYPE_INVALID = 0xFE,
 };
@@ -57,6 +58,18 @@ typedef struct __attribute__((packed)) {
   float battery_voltage;
 } control_log_t;
 
+typedef struct __attribute__((packed)) {
+  uint32_t timestamp_ms;
+  float left_measured_linear_speed;
+  float right_measured_linear_speed;
+  float measured_angular_speed;
+  int32_t left_millimeters;
+  int32_t right_millimeters;
+  float position_x;
+  float position_y;
+  float angle;
+} odometry_log_t;
+
 /*
  * Buffer de interpretación de registros SRAM.
  * Agregar aquí todo struct de log nuevo para que el buffer crezca solo;
@@ -64,7 +77,7 @@ typedef struct __attribute__((packed)) {
  */
 typedef union {
   control_log_t control;
-  /* sensor_log_t sensor; */
+  odometry_log_t odometry;
 } sram_log_t;
 
 typedef enum {

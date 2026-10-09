@@ -26,6 +26,7 @@ static uint8_t sensitivity_dps[] = {MPU_SENSITIVITY_1000DPS, MPU_SENSITIVITY_200
 static uint8_t current_full_scale_dps;
 
 static volatile float deg_integ;
+static volatile float rad_integ;
 static volatile float gyro_z_raw;
 static bool mpu_updating = false;
 static float offset_z[MPU_FULL_SCALE_COUNT];
@@ -208,6 +209,7 @@ void lsm6dsr_update(void) {
         get_kinematics().mpu.low_pass_filter_alpha * gyro_z_raw +
         (1 - get_kinematics().mpu.low_pass_filter_alpha) * new_gyro_z_raw;
 
+    rad_integ = rad_integ - lsm6dsr_get_gyro_z_radps() / UPDATE_FREQUENCY_HZ;
     deg_integ = deg_integ - lsm6dsr_get_gyro_z_dps() / UPDATE_FREQUENCY_HZ;
   }
 }
@@ -220,6 +222,10 @@ float lsm6dsr_get_gyro_z_radps(void) {
   return (gyro_z_raw * get_sensitivity_dps() / 1000 * MPU_DPS_TO_RADPS);
 }
 
+float lsm6dsr_get_gyro_z_rads(void) {
+  return rad_integ;
+}
+
 float lsm6dsr_get_gyro_z_dps(void) {
   return (gyro_z_raw * get_sensitivity_dps()) / 1000;
 }
@@ -227,8 +233,10 @@ float lsm6dsr_get_gyro_z_dps(void) {
 float lsm6dsr_get_gyro_z_degrees(void) {
   return deg_integ;
 }
-void lsm6dsr_set_gyro_z_degrees(float deg) {
-  deg_integ = deg;
+
+void lsm6dsr_reset_gyro_z(void) {
+  rad_integ = 0;
+  deg_integ = 0;
 }
 
 float get_offset_z(void) {

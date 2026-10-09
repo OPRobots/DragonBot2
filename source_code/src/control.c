@@ -118,6 +118,8 @@ void set_race_started(bool state) {
   if (!state) {
     menu_reset();
     race_finish_ms = get_clock_ticks();
+  }else{
+    set_log_start();
   }
 }
 
@@ -206,17 +208,17 @@ void control_loop(void) {
   if (is_debug_enabled()) {
     return;
   }
-  // if ((is_motor_pwm_saturated() || is_motor_angle_saturated()) && is_race_started()) {
-  //   set_motors_speed(0, 0);
-  //   set_fan_speed(0);
-  //   if (get_clock_ticks() - get_motors_saturated_ms() < 3000) {
-  //     blink_RGB_color(is_motor_pwm_saturated() ? 255 : 0, 0, is_motor_angle_saturated() ? 255 : 0, 50);
-  //   } else {
-  //     set_RGB_color(0, 0, 0);
-  //     set_race_started(false);
-  //   }
-  //   return;
-  // }
+  if ((is_motor_pwm_saturated() || is_motor_angle_saturated()) && is_race_started()) {
+    set_motors_speed(0, 0);
+    set_fan_speed(0);
+    if (get_clock_ticks() - get_motors_saturated_ms() < 3000) {
+      blink_RGB_color(is_motor_pwm_saturated() ? 255 : 0, 0, is_motor_angle_saturated() ? 255 : 0, 50);
+    } else {
+      set_RGB_color(0, 0, 0);
+      set_race_started(false);
+    }
+    return;
+  }
   if (!is_race_started()) {
     if (race_finish_ms > 0 && get_clock_ticks() - race_finish_ms <= 3000) {
       set_motors_brake();
@@ -255,14 +257,14 @@ void control_loop(void) {
       get_kinematics().kpi[KPI_LINEAR].ki * sum_linear_error +
       get_kinematics().kpi[KPI_LINEAR].kd * (linear_error - last_linear_error);
 
-  // angular_voltage =
-  //     get_kinematics().kpi[KPI_ANGULAR].kp * angular_error +
-  //     get_kinematics().kpi[KPI_ANGULAR].ki * sum_angular_error +
-  //     get_kinematics().kpi[KPI_ANGULAR].kd * (angular_error - last_angular_error) +
+  angular_voltage =
+      get_kinematics().kpi[KPI_ANGULAR].kp * angular_error +
+      get_kinematics().kpi[KPI_ANGULAR].ki * sum_angular_error +
+      get_kinematics().kpi[KPI_ANGULAR].kd * (angular_error - last_angular_error) +
 
-  //     get_kinematics().kpi[KPI_LINE_SENSORS].kp * line_sensors_error +
-  //     get_kinematics().kpi[KPI_LINE_SENSORS].ki * sum_line_sensors_error +
-  //     get_kinematics().kpi[KPI_LINE_SENSORS].kd * (line_sensors_error - last_line_sensors_error);
+      get_kinematics().kpi[KPI_LINE_SENSORS].kp * line_sensors_error +
+      get_kinematics().kpi[KPI_LINE_SENSORS].ki * sum_line_sensors_error +
+      get_kinematics().kpi[KPI_LINE_SENSORS].kd * (line_sensors_error - last_line_sensors_error);
 
   voltage_left = linear_voltage + angular_voltage;
   voltage_right = linear_voltage - angular_voltage;
@@ -303,7 +305,7 @@ void control_loop(void) {
     //         (int16_t)(line_sensors_error * 100),
     //         (int16_t)(get_battery_voltage() * 100));
 
-    control_log_t log = {
+    control_log_t control_log = {
         .timestamp_ms = get_log_timestamp(),
         .target_linear_speed = target_linear_speed,
         .ideal_linear_speed = ideal_linear_speed,
@@ -316,7 +318,20 @@ void control_loop(void) {
         .pwm_right = pwm_right,
         .battery_voltage = get_battery_voltage(),
     };
-    sram_log(SRAM_TYPE_CONTROL, &log, sizeof(log));
+    sram_log(SRAM_TYPE_CONTROL, &control_log, sizeof(control_log));
+
+    odometry_log_t odometry_log = {
+        .timestamp_ms = get_log_timestamp(),
+        .left_measured_linear_speed =get_encoder_left_speed(),
+        .right_measured_linear_speed =get_encoder_right_speed(),
+        .measured_angular_speed =get_measured_angular_speed(),
+        .left_millimeters =get_encoder_left_millimeters(),
+        .right_millimeters =get_encoder_right_millimeters(),
+        .position_x = get_encoder_position_x(),
+        .position_y = get_encoder_position_y(),
+        .angle = lsm6dsr_get_gyro_z_degrees(),
+    };
+    sram_log(SRAM_TYPE_ODOMETRY, &odometry_log, sizeof(odometry_log));
   }
 }
 

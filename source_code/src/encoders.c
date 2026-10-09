@@ -23,6 +23,9 @@ static volatile float left_speed;
 static volatile float right_speed;
 static volatile float angular_speed;
 
+static volatile float position_x;
+static volatile float position_y;
+
 /**
  * @brief Read left motor encoder counter.
  */
@@ -96,6 +99,8 @@ void reset_encoders(void) {
   left_millimeters = 0;
   right_millimeters = 0;
   avg_millimeters = 0;
+  position_x = 0;
+  position_y = 0;
 }
 
 /**
@@ -121,6 +126,14 @@ float get_encoder_avg_speed(void) {
 
 float get_encoder_angular_speed(void) {
   return angular_speed;
+}
+
+float get_encoder_position_x(void) {
+  return position_x;
+}
+
+float get_encoder_position_y(void) {
+  return position_y;
 }
 
 /**
@@ -177,15 +190,17 @@ void update_encoder_readings(void) {
   left_millimeters = left_micrometers / MICROMETERS_PER_MILLIMETER;
   right_millimeters = right_micrometers / MICROMETERS_PER_MILLIMETER;
 
-  // left_speed = left_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
-  // right_speed = right_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
-
   float new_left_speed = left_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
   float new_right_speed = right_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
   left_speed = 0.2f * new_left_speed + (1 - 0.2f) * left_speed;
   right_speed = 0.2f * new_right_speed + (1 - 0.2f) * right_speed;
 
   angular_speed = (float)((left_speed - right_speed) / MILLIMETERS_PER_METER) / ((float)WHEELS_SEPARATION / (float)MILLIMETERS_PER_METER);
+
+  avg_millimeters = (left_speed / UPDATE_FREQUENCY_HZ + right_speed / UPDATE_FREQUENCY_HZ) / 2.0f;
+
+  position_x += avg_millimeters * cos(lsm6dsr_get_gyro_z_rads());
+  position_y += avg_millimeters * sin(lsm6dsr_get_gyro_z_rads());
 
   last_left_ticks = left_ticks;
   last_right_ticks = right_ticks;

@@ -1,6 +1,7 @@
 #include <delay.h>
 
 static volatile uint32_t clock_ticks;
+static uint32_t log_start_ms = 0;
 
 void clock_tick(void) {
   clock_ticks++;
@@ -25,8 +26,12 @@ uint32_t get_clock_ticks(void) {
   return clock_ticks;
 }
 
+void set_log_start(void) {
+  log_start_ms = clock_ticks;
+}
+
 uint32_t get_log_timestamp(void) {
-  return clock_ticks;
+  return clock_ticks - log_start_ms;
 }
 
 void delay_us(uint32_t us) {

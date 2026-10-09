@@ -10,7 +10,7 @@ int main(void) {
   handle_robot_version();
   show_battery_level();
 
-  // sensors_calibration(false);
+  sensors_calibration(false);
 
   while (1) {
 
@@ -45,22 +45,24 @@ int main(void) {
             set_RGB_color(r, g, 0);
             if ((elapsed_ms > get_start_millis() * 0.75 || get_start_millis() == 0) && get_kinematics().fan_speed > 0) {
               set_target_fan_speed(get_kinematics().fan_speed / 2, 500);
+              set_line_sensors_correction_enabled(true);
             }
           }
           set_RGB_color(0, 0, 0);
 
+          reset_encoders();
+          lsm6dsr_reset_gyro_z();
           set_target_linear_speed(get_kinematics().linear_speed);
           // set_target_fan_speed(get_kinematics().fan_speed, 500);
-          set_line_sensors_correction_enabled(false);
-          delay(250);
-          set_target_linear_speed(0);
-          delay(250);
-          set_race_started(false);
+          // delay(250);
+          // set_target_linear_speed(0);
+          // delay(250);
+          // set_race_started(false);
         }
       }
     } else {
       // TODO loop de carrera
-      set_race_started(false);
+      // set_race_started(false);
     }
   }
 }
