@@ -33,9 +33,10 @@ enum sensors_mode {
   SENSORS_DIGITAL = 1,
 };
 
-enum control_strategy {
-  CONTROL_PWM = 0,
-  CONTROL_ENCODERS = 1,
+enum run_algorithm {
+  RUN_LINEFOLLOWER = 0,
+  RUN_ROBOTRACER = 1,
+  RUN_DRAGRACE = 2,
 };
 
 bool menu_run_handler(void);
@@ -53,6 +54,6 @@ enum speed_strategy menu_run_get_speed(void);
 enum adaptative_speed menu_run_get_adaptative_speed(void);
 enum filter_mode menu_run_get_filter_mode(void);
 enum sensors_mode menu_run_get_sensors_mode(void);
-enum control_strategy menu_run_get_control_strategy(void);
+enum run_algorithm menu_run_get_run_algorithm(void);
 
 #endif
