@@ -23,6 +23,26 @@ static int16_t mark_sensors_max[MARK_SENSOR_COUNT];
 static int16_t mark_sensors_min[MARK_SENSOR_COUNT];
 static int16_t mark_sensors_thr[MARK_SENSOR_COUNT];
 
+static bool is_white_line = false;
+
+static void check_line_color(void) {
+  uint8_t sensors_on_black_count = 0;
+  for (uint8_t sensor = 0; sensor <= get_line_sensor_count(); sensor++) {
+    if (get_line_sensor_raw(sensor) >= LINE_SENSOR_MAX_VALUE / 2) {
+      sensors_on_black_count++;
+    }
+  }
+
+  if (sensors_on_black_count == 0 || sensors_on_black_count == get_line_sensor_count()) {
+    uint32_t warning_start_ms = get_clock_ticks();
+    while (get_clock_ticks() - warning_start_ms < 2000) {
+      warning_status_led(50);
+    }
+  } else {
+    is_white_line = sensors_on_black_count >= get_line_sensor_count() / 2;
+  }
+}
+
 uint8_t *get_adc1_channels(void) {
   return adc1_channels;
 }
@@ -81,14 +101,11 @@ uint16_t get_line_sensor_calibrated(uint8_t index) {
         break;
     }
 
-#ifdef CONFIG_LINE_BLACK
-    return sensor_value;
-#elif CONFIG_LINE_WHITE
-    return LINE_SENSOR_MAX_VALUE - sensor_value;
-#else
-    return sensor_value;
-#endif
-
+    if (is_white_line) {
+      return LINE_SENSOR_MAX_VALUE - sensor_value;
+    } else {
+      return sensor_value;
+    }
   } else {
     return 0;
   }
@@ -132,13 +149,11 @@ uint16_t get_mark_sensor_calibrated(uint8_t index) {
         break;
     }
 
-#ifdef CONFIG_LINE_BLACK
-    return sensor_value;
-#elif CONFIG_LINE_WHITE
-    return LINE_SENSOR_MAX_VALUE - sensor_value;
-#else
-    return sensor_value;
-#endif
+    if (is_white_line) {
+      return LINE_SENSOR_MAX_VALUE - sensor_value;
+    } else {
+      return sensor_value;
+    }
 
   } else {
     return 0;
@@ -146,6 +161,7 @@ uint16_t get_mark_sensor_calibrated(uint8_t index) {
 }
 
 void sensors_calibration(bool force) {
+  check_line_color();
   bool use_eeprom_calibration = true;
   if (!force) {
     while (!get_menu_mode_btn()) {
@@ -156,6 +172,8 @@ void sensors_calibration(bool force) {
         }
       }
       set_status_led(use_eeprom_calibration);
+    }
+    while (get_menu_mode_btn()) {
     }
   }
 
@@ -224,10 +242,10 @@ void sensors_calibration(bool force) {
         }
         switch (sensor) {
           case 0:
-            set_info_led(INFO_LED_2, sensor_ok);
+            set_info_led(INFO_LED_4, sensor_ok);
             break;
           case 1:
-            set_info_led(INFO_LED_1, sensor_ok);
+            set_info_led(INFO_LED_5, sensor_ok);
             break;
           case 2:
             set_info_led(INFO_LED_D, sensor_ok);
@@ -239,6 +257,9 @@ void sensors_calibration(bool force) {
       }
 
       if (line_sensors_checked_count == get_line_sensor_count() && mark_sensors_checked_count == get_mark_sensor_count()) {
+        break;
+      }
+      if (get_menu_mode_btn()) {
         break;
       }
       sensors_checked_last_ms = get_clock_ticks();
@@ -354,6 +375,7 @@ void sensors_calibration(bool force) {
   set_RGB_color(0, 0, 0);
   sensors_print_calibration();
   delay(250);
+  reset_encoders();
 }
 
 void sensors_load_eeprom(void) {

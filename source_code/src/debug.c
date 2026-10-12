@@ -92,6 +92,7 @@ static void check_debug_active(void) {
     }
     debug_enabled = !debug_enabled;
     if (!debug_enabled) {
+      reset_encoders();
       menu_config_reset_values();
     }
   }
@@ -112,7 +113,7 @@ void debug_from_config(uint8_t type) {
     switch (type) {
       case DEBUG_MACROARRAY:
         // debug_macroarray();
-        sram_print_logs(SRAM_TYPE_ODOMETRY);
+        sram_print_logs(SRAM_TYPE_CONTROL);
         debug_enabled = false;
         menu_config_reset_values();
         break;
@@ -126,7 +127,7 @@ void debug_from_config(uint8_t type) {
         debug_line_position();
         break;
       case DEBUG_TYPE_MOTORS:
-        // debug_motors();
+        debug_motors();
         break;
       case DEBUG_TYPE_ENCODERS:
         debug_encoders();
@@ -138,7 +139,7 @@ void debug_from_config(uint8_t type) {
         debug_all_leds();
         break;
       case DEBUG_TYPE_FANS_DEMO:
-        // debug_fans();
+        debug_fans();
         break;
       case DEBUG_TYPE_SRAM_TEST:
         sram_debug_overflow_test(40000u);

@@ -11,6 +11,7 @@
 #include "delay.h"
 
 void check_buttons(void);
+void check_encoder_buttons(void);
 
 bool get_menu_select_btn(void);
 bool get_menu_up_btn(void);

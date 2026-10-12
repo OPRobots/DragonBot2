@@ -6,9 +6,6 @@ static uint32_t btn_menu_mode_ms = 0;
 static bool btn_menu_up = false;
 static bool btn_menu_down = false;
 
-static bool has_started_race = false;
-static bool has_stopped_after_race = true;
-
 void check_buttons(void) {
   if ((bool)gpio_get(GPIOA, GPIO6)) {
     if (btn_menu_select_ms == 0) {
@@ -25,32 +22,20 @@ void check_buttons(void) {
   } else {
     btn_menu_mode_ms = 0;
   }
+}
 
-  if (is_race_started()) {
-    has_stopped_after_race = false;
-  } else if (has_started_race && get_encoder_avg_speed() == 0) {
-    has_stopped_after_race = true;
-    has_started_race = false;
-    reset_encoders();
-  }
-
-  if (!is_race_started() && !menu_run_can_start() && !is_debug_enabled() && !is_calibration_enabled() && has_stopped_after_race) {
+void check_encoder_buttons(void) {
+  if (!menu_run_can_start() && !is_debug_enabled()) {
     if (get_encoder_left_millimeters() >= 10) {
       btn_menu_down = false;
       btn_menu_up = true;
     } else if (get_encoder_left_millimeters() <= -10) {
       btn_menu_up = false;
       btn_menu_down = true;
-    } else {
-      btn_menu_down = false;
-      btn_menu_up = false;
-    }
-  } else {
-    btn_menu_down = false;
-    btn_menu_up = false;
-    if (is_race_started() && !has_started_race) {
-      has_started_race = true;
-    }
+    } /*  else {
+       btn_menu_down = false;
+       btn_menu_up = false;
+     } */
   }
 }
 

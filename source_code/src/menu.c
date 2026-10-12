@@ -21,6 +21,7 @@ static bool handle_current_menu(void) {
  *
  */
 void menu_handler(void) {
+  check_encoder_buttons();
   bool menu_mode_btn_long_pressed = handle_current_menu();
   if (menu_mode_btn_long_pressed) {
     menu_config_reset_mode();
