@@ -123,4 +123,18 @@ void sram_store(uint32_t budget_cycles);
 void sram_log_set_paused(bool paused);
 bool sram_log_is_paused(void);
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * Diagnóstico / test
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/** @brief Recorre los registros validando tipos/tamaños y el header. */
+bool sram_debug_validate(void);
+
+/**
+ * @brief Test de overflow: formatea, escribe @p records registros sinteticos
+ * (mas que la capacidad, forzando wrap/overwrite) y valida el resultado.
+ * Ejercita el camino real (SPI incluido) sin poner el robot en pista.
+ */
+bool sram_debug_overflow_test(uint32_t records);
+
 #endif

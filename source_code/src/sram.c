@@ -159,6 +159,16 @@ static inline void sram_spi_wait_idle(void) {
   }
 }
 
+/* Limpia restos de RX (RXNE/OVR) que pueda dejar una transaccion previa.
+ * Sin esto, la primera lectura de la transaccion siguiente puede devolver un
+ * byte obsoleto y desplazar todo. */
+static inline void sram_spi_flush_rx(void) {
+  while (SPI_SR(SPI3) & SPI_SR_RXNE) {
+    (void)SPI_DR(SPI3);
+  }
+  (void)SPI_SR(SPI3); /* limpia OVR (requiere leer DR y luego SR) */
+}
+
 static inline uint8_t sram_spi_byte(uint8_t b) {
   sram_spi_wait_txe();
   SPI_DR(SPI3) = b;
@@ -167,12 +177,16 @@ static inline uint8_t sram_spi_byte(uint8_t b) {
   return (uint8_t)SPI_DR(SPI3);
 }
 
-static void sram_write_bytes(uint32_t addr, const void *buf, uint16_t len) {
-  const uint8_t *p = (const uint8_t *)buf;
+/* El 23AA04M está organizado en 2 bancos de 256 KB y su contador de dirección
+ * secuencial da la vuelta DENTRO del banco: una transaccion que cruce 0x40000
+ * se derrama a 0x00000 y corrompe. Partimos toda transaccion en esa frontera. */
+#define SRAM_BANK_SIZE 0x40000UL
+
+static void sram_write_chunk(uint32_t addr, const uint8_t *p, uint16_t len) {
   sram_cs_select();
+  sram_spi_flush_rx();
 
   //? Es una escritura: no hace falta esperar RXNE entre bytes, solo TXE.
-  //? Sin llamadas de libopencm3 para intentar optimizar lo máximo posible la velocidad
   sram_spi_wait_txe();
   SPI_DR(SPI3) = SRAM_CMD_WRITE;
   sram_spi_wait_txe();
@@ -187,14 +201,26 @@ static void sram_write_bytes(uint32_t addr, const void *buf, uint16_t len) {
   }
   sram_spi_wait_txe();
   sram_spi_wait_idle();
-  (void)SPI_DR(SPI3);
+  sram_spi_flush_rx();
 
   sram_cs_deselect();
 }
 
-static void sram_read_bytes(uint32_t addr, void *buf, uint16_t len) {
-  uint8_t *p = (uint8_t *)buf;
+static void sram_write_bytes(uint32_t addr, const void *buf, uint16_t len) {
+  const uint8_t *p = (const uint8_t *)buf;
+  while (len > 0u) {
+    uint32_t room = (uint32_t)(SRAM_BANK_SIZE - (addr & (SRAM_BANK_SIZE - 1u)));
+    uint16_t chunk = ((uint32_t)len < room) ? len : (uint16_t)room;
+    sram_write_chunk(addr, p, chunk);
+    addr += chunk;
+    p += chunk;
+    len = (uint16_t)(len - chunk);
+  }
+}
+
+static void sram_read_chunk(uint32_t addr, uint8_t *p, uint16_t len) {
   sram_cs_select();
+  sram_spi_flush_rx();
   (void)sram_spi_byte(SRAM_CMD_READ);
   (void)sram_spi_byte((uint8_t)((addr >> 16) & 0xFF));
   (void)sram_spi_byte((uint8_t)((addr >> 8) & 0xFF));
@@ -204,6 +230,18 @@ static void sram_read_bytes(uint32_t addr, void *buf, uint16_t len) {
   }
   sram_spi_wait_idle();
   sram_cs_deselect();
+}
+
+static void sram_read_bytes(uint32_t addr, void *buf, uint16_t len) {
+  uint8_t *p = (uint8_t *)buf;
+  while (len > 0u) {
+    uint32_t room = (uint32_t)(SRAM_BANK_SIZE - (addr & (SRAM_BANK_SIZE - 1u)));
+    uint16_t chunk = ((uint32_t)len < room) ? len : (uint16_t)room;
+    sram_read_chunk(addr, p, chunk);
+    addr += chunk;
+    p += chunk;
+    len = (uint16_t)(len - chunk);
+  }
 }
 
 static void sram_read_header(sram_header_t *header) {
@@ -572,6 +610,144 @@ void sram_store(uint32_t budget_cycles) {
   }
 
   sram_store_busy = false;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Diagnóstico / test
+ * ────────────────────────────────────────────────────────────────────────── */
+
+bool sram_debug_validate(void) {
+  sram_header_t header;
+  sram_read_header(&header);
+
+  bool valid = sram_header_is_valid(&header);
+  printf("--- validacion SRAM ---\n");
+  printf("magic=0x%04X (0x%04X) n=%u head=%lu tail=%lu bu=%lu valido=%d\n", header.magic, (uint16_t)SRAM_MAGIC, header.num_records,
+         (unsigned long)header.head_pos, (unsigned long)header.tail_pos, (unsigned long)header.bytes_used, (int)valid);
+  if (!valid) {
+    return false;
+  }
+
+  sram_iterator_t iterator;
+  sram_iterator_init(&iterator, SRAM_TYPE_ANY);
+
+  uint32_t count = 0;
+  uint16_t size;
+  sram_record_type_t type;
+  uint8_t buf[SRAM_LOG_MAX_PAYLOAD];
+  while (sram_iter_next(&iterator, buf, sizeof(buf), &size, &type)) {
+    if (type != SRAM_TYPE_CONTROL && type != SRAM_TYPE_ODOMETRY) {
+      printf("FALLO: tipo invalido 0x%02X en registro %lu\n", type, (unsigned long)count);
+      return false;
+    }
+    if (size != sizeof(control_log_t)) {
+      printf("FALLO: tamano invalido %u en registro %lu\n", size, (unsigned long)count);
+      return false;
+    }
+    count++;
+  }
+
+  bool ok = (count == header.num_records);
+  printf("recorridos=%lu (header.n=%u) %s\n", (unsigned long)count, header.num_records, ok ? "OK" : "MISMATCH");
+  return ok;
+}
+
+static bool sram_debug_test_direct(uint32_t records) {
+  sram_format();
+
+  uint16_t payload = (uint16_t)sizeof(control_log_t);
+  uint8_t data[SRAM_LOG_MAX_PAYLOAD];
+  bool ok = true;
+
+  uint32_t t0 = read_cycle_counter();
+  uint32_t wmax = 0;
+  for (uint32_t i = 0; i < records; i++) {
+    memset(data, 0, sizeof(data));
+    memcpy(data, &i, sizeof(i)); /* el timestamp identifica el registro */
+    sram_record_type_t type = (i & 1u) ? SRAM_TYPE_CONTROL : SRAM_TYPE_ODOMETRY;
+    uint32_t t1 = read_cycle_counter();
+    sram_result_t res = sram_write_record(type, data, payload);
+    uint32_t d = read_cycle_counter() - t1;
+    if (d > wmax) {
+      wmax = d;
+    }
+    if (res != SRAM_OK) {
+      printf("FALLO: escritura en %lu\n", (unsigned long)i);
+      ok = false;
+      break;
+    }
+  }
+  uint32_t dt_write = read_cycle_counter() - t0;
+  printf("[directo] escritura: media %lu us/reg, peor %lu us/reg\n", (unsigned long)(dt_write / records / (SYSCLK_FREQUENCY_HZ / 1000000u)),
+         (unsigned long)(wmax / (SYSCLK_FREQUENCY_HZ / 1000000u)));
+  printf("[directo] cache: n=%u head=%lu tail=%lu bu=%lu\n", sram_cached_header.num_records, (unsigned long)sram_cached_header.head_pos,
+         (unsigned long)sram_cached_header.tail_pos, (unsigned long)sram_cached_header.bytes_used);
+
+  sram_cache_store(); /* el header va diferido */
+
+  sram_header_t header;
+  sram_read_header(&header);
+  printf("[directo] sram : n=%u head=%lu tail=%lu bu=%lu\n", header.num_records, (unsigned long)header.head_pos,
+         (unsigned long)header.tail_pos, (unsigned long)header.bytes_used);
+
+  sram_iterator_t iterator;
+  sram_iterator_init(&iterator, SRAM_TYPE_ANY);
+
+  uint32_t count = 0;
+  uint32_t last_ts = 0xFFFFFFFFu;
+  bool seq_ok = true;
+  uint16_t size;
+  sram_record_type_t type;
+  uint8_t buf[SRAM_LOG_MAX_PAYLOAD];
+  while (sram_iter_next(&iterator, buf, sizeof(buf), &size, &type)) {
+    uint32_t ts;
+    memcpy(&ts, buf, sizeof(ts));
+    if (size != payload) {
+      printf("FALLO: tamano %u en registro %lu\n", size, (unsigned long)count);
+      ok = false;
+      break;
+    }
+    if (type != SRAM_TYPE_CONTROL && type != SRAM_TYPE_ODOMETRY) {
+      printf("FALLO: tipo 0x%02X en registro %lu\n", type, (unsigned long)count);
+      ok = false;
+      break;
+    }
+    if (count > 0u && ts != last_ts + 1u) {
+      printf("FALLO: secuencia de timestamps %lu -> %lu (registro %lu)\n", (unsigned long)last_ts, (unsigned long)ts,
+             (unsigned long)count);
+      seq_ok = false;
+    }
+    last_ts = ts;
+    count++;
+  }
+
+  if (count != header.num_records) {
+    printf("FALLO: recorridos=%lu != header.n=%u\n", (unsigned long)count, header.num_records);
+    ok = false;
+  }
+  if (last_ts != records - 1u) {
+    printf("FALLO: ultimo ts=%lu, esperado %lu\n", (unsigned long)last_ts, (unsigned long)(records - 1u));
+    ok = false;
+  }
+  if (!seq_ok) {
+    ok = false;
+  }
+  printf("[directo] ultimo_ts=%lu esperado=%lu %s\n", (unsigned long)last_ts, (unsigned long)(records - 1u), ok ? "PASS" : "FAIL");
+  return ok;
+}
+
+bool sram_debug_overflow_test(uint32_t records) {
+  bool was_paused = sram_log_is_paused();
+  sram_log_set_paused(true);
+
+  printf("--- test overflow SRAM: %lu registros ---\n", (unsigned long)records);
+
+  bool ok = sram_debug_test_direct(records);
+
+  printf("RESULTADO: %s\n", ok ? "PASS" : "FAIL");
+
+  sram_log_set_paused(was_paused);
+  return ok;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

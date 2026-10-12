@@ -24,6 +24,7 @@
 #define DEBUG_TYPE_CORRECCION_POSICION 7
 #define DEBUG_TYPE_LEDS_PARTY 8
 #define DEBUG_TYPE_FANS_DEMO 9
+#define DEBUG_TYPE_SRAM_TEST 10
 
 bool is_debug_enabled(void);
 void debug_from_config(uint8_t type);

@@ -126,7 +126,7 @@ void debug_from_config(uint8_t type) {
         debug_line_position();
         break;
       case DEBUG_TYPE_MOTORS:
-        debug_motors();
+        // debug_motors();
         break;
       case DEBUG_TYPE_ENCODERS:
         debug_encoders();
@@ -138,7 +138,13 @@ void debug_from_config(uint8_t type) {
         debug_all_leds();
         break;
       case DEBUG_TYPE_FANS_DEMO:
-        debug_fans();
+        // debug_fans();
+        break;
+      case DEBUG_TYPE_SRAM_TEST:
+        sram_debug_overflow_test(40000u);
+        sram_debug_validate();
+        debug_enabled = false;
+        menu_config_reset_values();
         break;
     }
   } else {
