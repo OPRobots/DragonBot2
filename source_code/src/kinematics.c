@@ -38,14 +38,14 @@ static struct kpi_params kpi_run[] = {
 
 static struct kinematics kinematics_settings[] = {
     [SPEED_TEST] = {
-        .linear_speed = 800,
+        .linear_speed = 2000,
         .linear_accel = {
             .break_accel = 5000,
             .accel_hard = 5000,
             .speed_hard = 0,
             .accel_soft = 0,
         },
-        .fan_speed = 30,
+        .fan_speed = 10,
         .kpi = kpi_test,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,

@@ -53,7 +53,7 @@ int main(void) {
           reset_encoders();
           lsm6dsr_reset_gyro_z();
           set_target_linear_speed(get_kinematics().linear_speed);
-          // set_target_fan_speed(get_kinematics().fan_speed, 500);
+          set_target_fan_speed(get_kinematics().fan_speed, 500);
           // delay(250);
           // set_target_linear_speed(0);
           // delay(250);
