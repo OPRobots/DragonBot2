@@ -30,10 +30,11 @@ static void debug_sensors_raw(void) {
 static void debug_sensors_calibrated(void) {
   if (get_clock_ticks() > debug_last_print_ms + 50) {
     for (uint8_t sensor = 0; sensor < get_line_sensor_count(); sensor++) {
-      printf("S%02d: %4d\t", sensor + 1, get_line_sensor_calibrated(sensor));
+      printf("%4d ", get_line_sensor_calibrated(sensor));
     }
+    printf("| ");
     for (uint8_t sensor = 0; sensor < get_mark_sensor_count(); sensor++) {
-      printf("M%02d: %4d\t", sensor + 1, get_mark_sensor_calibrated(sensor));
+      printf("%4d ", get_mark_sensor_calibrated(sensor));
     }
     printf("\n");
     debug_last_print_ms = get_clock_ticks();
@@ -83,7 +84,7 @@ static void debug_motors(void) {
 }
 
 static void debug_fans(void) {
-  set_fan_speed(30);
+  set_fan_speed(5);
 }
 
 static void check_debug_active(void) {
@@ -113,7 +114,7 @@ void debug_from_config(uint8_t type) {
     switch (type) {
       case DEBUG_MACROARRAY:
         // debug_macroarray();
-        sram_print_logs(SRAM_TYPE_CONTROL);
+        sram_print_logs(SRAM_TYPE_ODOMETRY);
         debug_enabled = false;
         menu_config_reset_values();
         break;

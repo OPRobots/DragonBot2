@@ -135,6 +135,7 @@ static void handle_menu_run_btn(void) {
     menu_run_up();
   }
   if (get_menu_down_btn() || (modeRun == MODE_RACE && get_menu_select_btn())) {
+    reset_encoders();
     menu_run_down();
   }
 }
