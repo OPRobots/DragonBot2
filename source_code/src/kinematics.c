@@ -45,7 +45,7 @@ static struct kinematics kinematics_settings[] = {
             .speed_hard = 0,
             .accel_soft = 0,
         },
-        .fan_speed = 10,
+        .fan_speed = 15,
         .kpi = kpi_test,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
@@ -53,14 +53,14 @@ static struct kinematics kinematics_settings[] = {
         },
     },
     [SPEED_NORMAL] = {
-        .linear_speed = 3000,
+        .linear_speed = 2500,
         .linear_accel = {
             .break_accel = 12000,
             .accel_hard = 12000,
             .speed_hard = 0,
             .accel_soft = 0,
         },
-        .fan_speed = 60,
+        .fan_speed = 20,
         .kpi = kpi_run,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
@@ -68,14 +68,14 @@ static struct kinematics kinematics_settings[] = {
         },
     },
     [SPEED_MEDIUM] = {
-        .linear_speed = 5000,
+        .linear_speed = 3000,
         .linear_accel = {
             .break_accel = 15000,
             .accel_hard = 15000,
             .speed_hard = 0,
             .accel_soft = 0,
         },
-        .fan_speed = 65,
+        .fan_speed = 35,
         .kpi = kpi_run,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
@@ -83,14 +83,14 @@ static struct kinematics kinematics_settings[] = {
         },
     },
     [SPEED_FAST] = {
-        .linear_speed = 5500,
+        .linear_speed = 3500,
         .linear_accel = {
             .break_accel = 20000,
             .accel_hard = 20000,
             .speed_hard = 3500,
             .accel_soft = 15000,
         },
-        .fan_speed = 75,
+        .fan_speed = 45,
         .kpi = kpi_run,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
@@ -98,14 +98,14 @@ static struct kinematics kinematics_settings[] = {
         },
     },
     [SPEED_SUPER] = {
-        .linear_speed = 6000,
+        .linear_speed = 3750,
         .linear_accel = {
             .break_accel = 25000,
             .accel_hard = 25000,
             .speed_hard = 4000,
             .accel_soft = 20000,
         },
-        .fan_speed = 85,
+        .fan_speed = 50,
         .kpi = kpi_run,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
@@ -113,14 +113,14 @@ static struct kinematics kinematics_settings[] = {
         },
     },
     [SPEED_HAKI] = {
-        .linear_speed = 6500,
+        .linear_speed = 4000,
         .linear_accel = {
             .break_accel = 30000,
             .accel_hard = 30000,
             .speed_hard = 4500,
             .accel_soft = 25000,
         },
-        .fan_speed = 90,
+        .fan_speed = 60,
         .kpi = kpi_run,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
