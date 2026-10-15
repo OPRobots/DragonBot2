@@ -5,3 +5,6 @@
 .vscode/*
 desktop.ini
 *.skb
+
+# KiCad Local History (repositorio git interno, no debe versionarse en el repo padre)
+.history/
