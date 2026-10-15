@@ -15,6 +15,7 @@
 
 #include "config.h"
 #include "lsm6dsr.h"
+#include "odometry.h"
 #include "rc5.h"
 #include "sensors.h"
 #include "sram.h"

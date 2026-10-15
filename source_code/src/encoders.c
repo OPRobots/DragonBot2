@@ -1,5 +1,15 @@
 #include "encoders.h"
 
+/*
+ * Convención de odometría:
+ *   +x  = avance del robot
+ *   +y  = izquierda del robot
+ *   theta = rumbo, positivo = giro a la izquierda (CCW), theta = +integral(omega_z dt)
+ *
+ * Este módulo aporta deltas de ticks, distancias y velocidades (angular
+ * CCW-positiva). La pose (x/y/theta) y la fusión viven en odometry.c.
+ */
+
 /* Difference between the current count and the latest count */
 static volatile int32_t left_diff_ticks;
 static volatile int32_t right_diff_ticks;
@@ -16,15 +26,11 @@ static volatile float avg_micrometers;
 /* Total travelled distance, in millimeters */
 static volatile int32_t left_millimeters;
 static volatile int32_t right_millimeters;
-static volatile float avg_millimeters;
 
-/* Speed, in millimeters per second */
+/* Speed, in millimeters per second (CCW-positive angular speed) */
 static volatile float left_speed;
 static volatile float right_speed;
 static volatile float angular_speed;
-
-static volatile float position_x;
-static volatile float position_y;
 
 /**
  * @brief Read left motor encoder counter.
@@ -93,14 +99,16 @@ int32_t get_encoder_avg_millimeters(void) {
 void reset_encoders(void) {
   left_total_ticks = 0;
   right_total_ticks = 0;
+  left_diff_ticks = 0;
+  right_diff_ticks = 0;
   left_micrometers = 0;
   right_micrometers = 0;
   avg_micrometers = 0;
   left_millimeters = 0;
   right_millimeters = 0;
-  avg_millimeters = 0;
-  position_x = 0;
-  position_y = 0;
+  left_speed = 0;
+  right_speed = 0;
+  angular_speed = 0;
 }
 
 /**
@@ -128,12 +136,18 @@ float get_encoder_angular_speed(void) {
   return angular_speed;
 }
 
-float get_encoder_position_x(void) {
-  return position_x;
+/**
+ * @brief Incremento de ticks de la rueda izquierda desde la última lectura.
+ */
+int32_t get_encoder_left_diff_ticks(void) {
+  return left_diff_ticks;
 }
 
-float get_encoder_position_y(void) {
-  return position_y;
+/**
+ * @brief Incremento de ticks de la rueda derecha desde la última lectura.
+ */
+int32_t get_encoder_right_diff_ticks(void) {
+  return right_diff_ticks;
 }
 
 /**
@@ -185,22 +199,18 @@ void update_encoder_readings(void) {
   left_total_ticks += left_diff_ticks;
   right_total_ticks += right_diff_ticks;
 
-  left_micrometers = (int32_t)(left_total_ticks * MICROMETERS_PER_TICK);
-  right_micrometers = (int32_t)(right_total_ticks * MICROMETERS_PER_TICK);
+  left_micrometers = (int32_t)(left_total_ticks * get_micrometers_per_tick());
+  right_micrometers = (int32_t)(right_total_ticks * get_micrometers_per_tick());
   left_millimeters = left_micrometers / MICROMETERS_PER_MILLIMETER;
   right_millimeters = right_micrometers / MICROMETERS_PER_MILLIMETER;
 
-  float new_left_speed = left_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
-  float new_right_speed = right_diff_ticks * (MICROMETERS_PER_TICK / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
+  float new_left_speed = left_diff_ticks * (get_micrometers_per_tick() / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
+  float new_right_speed = right_diff_ticks * (get_micrometers_per_tick() / MICROMETERS_PER_MILLIMETER) * CONTROL_FREQUENCY_HZ;
   left_speed = 0.2f * new_left_speed + (1 - 0.2f) * left_speed;
   right_speed = 0.2f * new_right_speed + (1 - 0.2f) * right_speed;
 
-  angular_speed = (float)((left_speed - right_speed) / MILLIMETERS_PER_METER) / ((float)WHEELS_SEPARATION / (float)MILLIMETERS_PER_METER);
-
-  avg_millimeters = (left_speed / UPDATE_FREQUENCY_HZ + right_speed / UPDATE_FREQUENCY_HZ) / 2.0f;
-
-  position_x += avg_millimeters * cos(lsm6dsr_get_gyro_z_rads());
-  position_y += avg_millimeters * sin(lsm6dsr_get_gyro_z_rads());
+  /* Velocidad angular CCW-positiva: rueda derecha más rápida => giro a la izquierda. */
+  angular_speed = (float)((right_speed - left_speed) / MILLIMETERS_PER_METER) / (get_wheels_separation() / (float)MILLIMETERS_PER_METER);
 
   last_left_ticks = left_ticks;
   last_right_ticks = right_ticks;

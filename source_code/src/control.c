@@ -6,6 +6,7 @@ static volatile uint32_t race_finish_ms = 0;
 static volatile uint32_t emergency_stop_ms = 0;
 
 static volatile bool control_debug = false;
+static volatile bool control_paused = false;
 
 static volatile int32_t target_linear_speed = 0;
 static volatile int32_t ideal_linear_speed = 0;
@@ -92,7 +93,7 @@ static float get_measured_linear_speed(void) {
 }
 
 static float get_measured_angular_speed(void) {
-  return -lsm6dsr_get_gyro_z_radps();
+  return lsm6dsr_get_gyro_z_radps();
 }
 
 /**
@@ -118,13 +119,17 @@ void set_race_started(bool state) {
   if (!state) {
     menu_reset();
     race_finish_ms = get_clock_ticks();
-  }else{
+  } else {
     set_log_start();
   }
 }
 
 void set_control_debug(bool state) {
   control_debug = state;
+}
+
+void set_control_paused(bool paused) {
+  control_paused = paused;
 }
 
 int8_t check_start_run(void) {
@@ -171,6 +176,7 @@ void reset_control_all(void) {
   reset_control_speed();
   reset_motors_saturated();
   reset_encoders();
+  odometry_reset();
 }
 
 void set_target_linear_speed(int32_t linear_speed) {
@@ -199,13 +205,17 @@ void set_target_fan_speed(int32_t fan_speed, int32_t ms) {
   fan_speed_accel = (fan_speed - ideal_fan_speed) * CONTROL_FREQUENCY_HZ / ms;
 }
 
+int32_t get_ideal_fan_speed(void) {
+  return (int32_t)ideal_fan_speed;
+}
+
 /**
  * @brief Función de control general del robot
  * · Gestiona velocidades, aceleraciones, correcciones, ...
  *
  */
 void control_loop(void) {
-  if (is_debug_enabled()) {
+  if (is_debug_enabled() || control_paused) {
     return;
   }
   if ((is_motor_pwm_saturated() || is_motor_angle_saturated()) && is_race_started()) {
@@ -322,14 +332,25 @@ void control_loop(void) {
 
     odometry_log_t odometry_log = {
         .timestamp_ms = get_log_timestamp(),
-        .left_measured_linear_speed =get_encoder_left_speed(),
-        .right_measured_linear_speed =get_encoder_right_speed(),
-        .measured_angular_speed =get_measured_angular_speed(),
-        .left_millimeters =get_encoder_left_millimeters(),
-        .right_millimeters =get_encoder_right_millimeters(),
-        .position_x = get_encoder_position_x(),
-        .position_y = get_encoder_position_y(),
-        .angle = lsm6dsr_get_gyro_z_degrees(),
+        .left_measured_linear_speed = get_encoder_left_speed(),
+        .right_measured_linear_speed = get_encoder_right_speed(),
+        .measured_angular_speed = get_measured_angular_speed(),
+        .left_millimeters = get_encoder_left_millimeters(),
+        .right_millimeters = get_encoder_right_millimeters(),
+        .position_x = odometry_get_x(),
+        .position_y = odometry_get_y(),
+        .angle = odometry_get_theta_deg(),
+        .linear_speed = odometry_get_linear_speed(),
+        .encoder_omega = odometry_get_encoder_omega(),
+        .encoder_v = odometry_get_encoder_v(),
+        .gyro_rate = lsm6dsr_get_gyro_z_radps(),
+        .gyro_bias = odometry_get_gyro_bias(),
+        .slip = odometry_get_slip() ? 1 : 0,
+        .dt = odometry_get_dt(),
+        .line_offset = get_line_sensor_position(),
+        .var_x = odometry_get_var_x(),
+        .var_y = odometry_get_var_y(),
+        .var_theta = odometry_get_var_theta(),
     };
     sram_log(SRAM_TYPE_ODOMETRY, &odometry_log, sizeof(odometry_log));
   }

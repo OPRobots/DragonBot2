@@ -1,17 +1,5 @@
 #include "sys_tick.h"
 
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/cm3/systick.h>
-
-#include "battery.h"
-#include "buttons.h"
-#include "constants.h"
-#include "control.h"
-#include "delay.h"
-#include "encoders.h"
-#include "lsm6dsr.h"
-#include "sram.h"
-
 static volatile uint8_t sys_tick_slot = 0;
 
 void sys_tick_init(void) {
@@ -39,6 +27,7 @@ void sys_tick_handler(void) {
     case SYS_TICK_SLOT_MPU_BMP:
       if (!sram_log_is_paused()) {
         lsm6dsr_update();
+        odometry_update();
         // bmp_update();
       }
       break;

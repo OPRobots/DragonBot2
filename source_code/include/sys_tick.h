@@ -3,6 +3,19 @@
 
 #include <stdint.h>
 
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/systick.h>
+
+#include "battery.h"
+#include "buttons.h"
+#include "constants.h"
+#include "control.h"
+#include "delay.h"
+#include "encoders.h"
+#include "lsm6dsr.h"
+#include "odometry.h"
+#include "sram.h"
+
 /** Frecuencia del SysTick: 8 kHz => 8 slots de 125 us = 1 kHz por tarea. */
 #define SYSTICK_FREQUENCY_HZ 8000
 
@@ -13,7 +26,7 @@
  * cíclica, de modo que cada tarea se ejecuta a 1 kHz en su propio slot.
  */
 typedef enum {
-  SYS_TICK_SLOT_CLOCK_BUTTONS = 0,   /* clock_tick() + check_buttons() */
+  SYS_TICK_SLOT_CLOCK_BUTTONS = 0, /* clock_tick() + check_buttons() */
   SYS_TICK_SLOT_ENCODERS_LINE = 1,
   SYS_TICK_SLOT_MPU_BMP = 2,
   SYS_TICK_SLOT_CONTROL = 3,

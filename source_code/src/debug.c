@@ -70,6 +70,23 @@ static void debug_encoders(void) {
   }
 }
 
+/**
+ * @brief Log en vivo del estado del EKF de odometría (banco, con cable).
+ *
+ * Imprime x, y, rumbo, velocidades (fusión + gyro + encoders), bias, slip, dt y
+ * varianzas cada 50 ms para validar/ajustar sin volcar la SRAM.
+ */
+static void debug_odometry(void) {
+  if (get_clock_ticks() > debug_last_print_ms + 50) {
+    printf("x=%.1f y=%.1f th=%.2f v=%.1f w=%.3f gyro=%.3f encw=%.3f bias=%.4f slip=%d dt=%.4f vx=%.1f vy=%.1f vth=%.6f\n",
+           odometry_get_x(), odometry_get_y(), odometry_get_theta_deg(), odometry_get_linear_speed(),
+           odometry_get_angular_speed(), lsm6dsr_get_gyro_z_radps(), odometry_get_encoder_omega(),
+           odometry_get_gyro_bias(), odometry_get_slip() ? 1 : 0, odometry_get_dt(),
+           odometry_get_var_x(), odometry_get_var_y(), odometry_get_var_theta());
+    debug_last_print_ms = get_clock_ticks();
+  }
+}
+
 static void debug_motors(void) {
   set_motors_speed(150, 150);
   if (get_clock_ticks() > debug_last_print_ms + 50) {
@@ -93,9 +110,9 @@ static void check_debug_active(void) {
     }
     debug_enabled = !debug_enabled;
     if (!debug_enabled) {
-      reset_encoders();
       menu_config_reset_values();
     }
+    reset_encoders();
   }
 }
 
@@ -142,12 +159,15 @@ void debug_from_config(uint8_t type) {
       case DEBUG_TYPE_FANS_DEMO:
         debug_fans();
         break;
-      case DEBUG_TYPE_SRAM_TEST:
-        sram_debug_overflow_test(40000u);
-        sram_debug_validate();
-        debug_enabled = false;
-        menu_config_reset_values();
+      case DEBUG_TYPE_ODOMETRY:
+        debug_odometry();
         break;
+        // case DEBUG_TYPE_SRAM_TEST:
+        //   sram_debug_overflow_test(40000u);
+        //   sram_debug_validate();
+        //   debug_enabled = false;
+        //   menu_config_reset_values();
+        //   break;
     }
   } else {
     set_RGB_color(0, 0, 0);

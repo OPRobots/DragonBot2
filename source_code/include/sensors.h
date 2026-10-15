@@ -33,6 +33,7 @@ uint8_t *get_adc2_channels(void);
 uint8_t get_adc2_channel_count(void);
 volatile uint16_t *get_adc2_raw(void);
 
+void check_line_color(void);
 uint8_t get_line_sensor_count(void);
 uint16_t get_line_sensor_raw(uint8_t index);
 uint16_t get_line_sensor_calibrated(uint8_t index);

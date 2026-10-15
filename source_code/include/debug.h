@@ -10,9 +10,11 @@
 #include "encoders.h"
 #include "macroarray.h"
 #include "motors.h"
+#include "odometry.h"
 #include "sensors.h"
 #include "sram.h"
 #include "usart.h"
+
 
 #define DEBUG_NONE 0
 #define DEBUG_MACROARRAY 1
@@ -24,6 +26,7 @@
 #define DEBUG_TYPE_CORRECCION_POSICION 7
 #define DEBUG_TYPE_LEDS_PARTY 8
 #define DEBUG_TYPE_FANS_DEMO 9
+#define DEBUG_TYPE_ODOMETRY 10
 #define DEBUG_TYPE_SRAM_TEST 10
 
 bool is_debug_enabled(void);

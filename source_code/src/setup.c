@@ -427,4 +427,5 @@ void setup(void) {
   sys_tick_init();
   setup_mpu();
   setup_sram();
+  odometry_init();
 }

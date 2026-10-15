@@ -1,6 +1,7 @@
 #include "battery.h"
 #include "bmp280.h"
 #include "buttons.h"
+#include "odometry.h"
 #include "setup.h"
 #include "sram.h"
 
@@ -20,7 +21,11 @@ int main(void) {
     // printf("L: %5.2f m/s ", get_encoder_left_speed());
     // printf("R: %5.2f m/s ", get_encoder_right_speed());
     // printf("\n");
-    // printf("z-rad/s: %7.4f z-angle: %5.2f\n", lsm6dsr_get_gyro_z_radps(), lsm6dsr_get_gyro_z_degrees());
+    // printf("z-rad/s: %7.4f z-angle: %5.2f z-bias:%5.6f\n", odometry_get_angular_speed(), odometry_get_theta_deg(), odometry_get_gyro_bias());
+
+    // printf("theta_deg: %4.2f gyro_bias: %4.2f dt: %4.4f\n",odometry_get_theta_deg(), odometry_get_gyro_bias(), odometry_get_dt());
+    // printf("encoder_omega: %4.2f measured_angular_speed %4.2f\n", odometry_get_encoder_omega(), odometry_get_angular_speed());
+    // printf("theta_deg: %4.2f encoder_left_micrometers: %4ld encoder_right_micrometers: %4ld\n", odometry_get_theta_deg(), get_encoder_left_micrometers(), get_encoder_right_micrometers());
 
     if (!is_race_started()) {
       menu_handler();
@@ -48,10 +53,14 @@ int main(void) {
               set_line_sensors_correction_enabled(true);
             }
           }
+          while (get_ideal_fan_speed() < get_kinematics().fan_speed) {
+            set_RGB_rainbow();
+          }
           set_RGB_color(0, 0, 0);
+          delay(100);
 
           reset_encoders();
-          lsm6dsr_reset_gyro_z();
+          odometry_reset();
           set_target_linear_speed(get_kinematics().linear_speed);
           // set_target_fan_speed(get_kinematics().fan_speed, 500);
           // delay(250);

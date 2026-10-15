@@ -14,6 +14,9 @@
 #define OUTZ_L_G 0x26
 #define OUTZ_H_G 0x27
 
+#define STATUS_REG 0x1E
+#define STATUS_GDA 0x02
+
 #define GYRO_SENSITIVITY_2000DPS 70.0f
 #define GYRO_SENSITIVITY_4000DPS 140.0f
 #define MPU_DPS_TO_RADPS (PI / 180)
@@ -25,9 +28,9 @@ static uint8_t sensitivity_dps[] = {MPU_SENSITIVITY_1000DPS, MPU_SENSITIVITY_200
 
 static uint8_t current_full_scale_dps;
 
-static volatile float deg_integ;
-static volatile float rad_integ;
 static volatile float gyro_z_raw;
+static volatile bool gyro_sample_ready;
+static uint8_t gyro_status_miss;
 static bool mpu_updating = false;
 static float offset_z[MPU_FULL_SCALE_COUNT];
 
@@ -66,13 +69,17 @@ static void platform_delay(uint32_t ms) {
 
 /* #endregion */
 
-static int16_t lsm6dsr_read_gyro_z_raw(void) {
+static int16_t lsm6dsr_read_axis16(uint8_t reg_l) {
   gpio_clear(GPIOA, GPIO15);
-  spi_xfer(SPI3, (MPU_READ | OUTZ_L_G));
-  uint8_t zl = spi_xfer(SPI3, 0x00);
-  uint8_t zh = spi_xfer(SPI3, 0x00);
+  spi_xfer(SPI3, (MPU_READ | reg_l));
+  uint8_t low = spi_xfer(SPI3, 0x00);
+  uint8_t high = spi_xfer(SPI3, 0x00);
   gpio_set(GPIOA, GPIO15);
-  return (int16_t)((zh << 8) | zl);
+  return (int16_t)((high << 8) | low);
+}
+
+static int16_t lsm6dsr_read_gyro_z_raw(void) {
+  return lsm6dsr_read_axis16(OUTZ_L_G);
 }
 
 static int get_sensitivity_dps(void) {
@@ -130,14 +137,17 @@ void lsm6dsr_init(void) {
 
   /* Gyro */
   lsm6dsr_gy_power_mode_set(&dev_ctx, LSM6DSR_GY_HIGH_PERFORMANCE);
-  lsm6dsr_gy_data_rate_set(&dev_ctx, LSM6DSR_GY_ODR_1666Hz);
+  lsm6dsr_gy_data_rate_set(&dev_ctx, LSM6DSR_GY_ODR_833Hz);
   lsm6dsr_gy_full_scale_set(&dev_ctx, get_kinematics().mpu.full_scale_dps);
   current_full_scale_dps = get_kinematics().mpu.full_scale_dps;
 
-  /* Filters */
-  lsm6dsr_gy_filter_lp1_set(&dev_ctx, PROPERTY_ENABLE);
-  // lsm6dsr_gy_hp_path_internal_set(&dev_ctx, LSM6DSR_HP_FILTER_NONE);
-  lsm6dsr_gy_lp1_bandwidth_set(&dev_ctx, LSM6DSR_LIGHT);
+  /*
+   * Base de medida CRUDA para el EKF (F3.0, D8): sin LPF1 hardware ni filtro
+   * software. A ODR 833 Hz el contenido (<416 Hz) queda por debajo de Nyquist
+   * de la lectura a 1 kHz, así que no hay aliasing al decimar. El filtrado lo
+   * hará el estimador (α-β / EKF).
+   */
+  lsm6dsr_gy_filter_lp1_set(&dev_ctx, PROPERTY_DISABLE);
 
   delay(1000);
 }
@@ -201,16 +211,28 @@ void lsm6dsr_load_eeprom(void) {
 }
 
 void lsm6dsr_update(void) {
-  if (mpu_updating) {
-    float new_gyro_z_raw = lsm6dsr_read_gyro_z_raw();
-    new_gyro_z_raw -= get_offset_z();
+  if (!mpu_updating) {
+    return;
+  }
 
-    gyro_z_raw =
-        get_kinematics().mpu.low_pass_filter_alpha * gyro_z_raw +
-        (1 - get_kinematics().mpu.low_pass_filter_alpha) * new_gyro_z_raw;
+  uint8_t status = lsm6dsr_read_register(STATUS_REG);
+  bool gyro_new = (status & STATUS_GDA) != 0;
 
-    rad_integ = rad_integ - lsm6dsr_get_gyro_z_radps() / UPDATE_FREQUENCY_HZ;
-    deg_integ = deg_integ - lsm6dsr_get_gyro_z_dps() / UPDATE_FREQUENCY_HZ;
+  /*
+   * Si el flag de data-ready no llega (fallo de configuración o de lectura),
+   * se fuerza una lectura periódica para no dejar el rumbo congelado.
+   */
+  if (gyro_new) {
+    gyro_status_miss = 0;
+  } else if (gyro_status_miss < 0xFF) {
+    gyro_status_miss++;
+  }
+
+  if (gyro_new || gyro_status_miss >= 5) {
+    gyro_status_miss = 0;
+    /* Medida cruda (offset calibrado restado), sin filtrado software (F3.0). */
+    gyro_z_raw = (float)lsm6dsr_read_gyro_z_raw() - get_offset_z();
+    gyro_sample_ready = true;
   }
 }
 
@@ -222,21 +244,22 @@ float lsm6dsr_get_gyro_z_radps(void) {
   return (gyro_z_raw * get_sensitivity_dps() / 1000 * MPU_DPS_TO_RADPS);
 }
 
-float lsm6dsr_get_gyro_z_rads(void) {
-  return rad_integ;
-}
-
 float lsm6dsr_get_gyro_z_dps(void) {
   return (gyro_z_raw * get_sensitivity_dps()) / 1000;
 }
 
-float lsm6dsr_get_gyro_z_degrees(void) {
-  return deg_integ;
-}
-
-void lsm6dsr_reset_gyro_z(void) {
-  rad_integ = 0;
-  deg_integ = 0;
+/**
+ * @brief Consume el aviso de muestra nueva de gyro.
+ *
+ * Devuelve true una sola vez por cada muestra leída del sensor. Permite al
+ * estimador no reutilizar la misma medida en varias actualizaciones.
+ */
+bool lsm6dsr_gyro_sample_ready(void) {
+  if (gyro_sample_ready) {
+    gyro_sample_ready = false;
+    return true;
+  }
+  return false;
 }
 
 float get_offset_z(void) {

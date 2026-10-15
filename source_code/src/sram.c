@@ -847,9 +847,11 @@ static void sram_print_odometry_log(const void *data, uint16_t size) {
     return;
   }
   const odometry_log_t *log = (const odometry_log_t *)data;
-  printf("t=%ld,left_speed=%.2f,right_speed=%.2f,angular_speed=%.2f,left_mm=%ld,right_mm=%ld,pos_x=%.2f,pos_y=%.2f,angle=%.2f\n", log->timestamp_ms,
+  printf("t=%ld,left_speed=%.2f,right_speed=%.2f,angular_speed=%.2f,left_mm=%ld,right_mm=%ld,pos_x=%.2f,pos_y=%.2f,angle=%.2f,linear_speed=%.2f,encoder_omega=%.2f,encoder_v=%.2f,gyro_rate=%.4f,gyro_bias=%.4f,slip=%d,dt=%.6f,line_offset=%ld,var_x=%.2f,var_y=%.2f,var_theta=%.6f\n", log->timestamp_ms,
          log->left_measured_linear_speed, log->right_measured_linear_speed, log->measured_angular_speed, log->left_millimeters,
-         log->right_millimeters, log->position_x, log->position_y, log->angle);
+         log->right_millimeters, log->position_x, log->position_y, log->angle, log->linear_speed, log->encoder_omega,
+         log->encoder_v, log->gyro_rate, log->gyro_bias, (int)log->slip, log->dt, (long)log->line_offset, log->var_x,
+         log->var_y, log->var_theta);
 }
 
 void sram_print_logs(sram_record_type_t type) {

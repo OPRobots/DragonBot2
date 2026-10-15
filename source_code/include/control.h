@@ -15,11 +15,13 @@
 #include "kinematics.h"
 #include "macroarray.h"
 #include "menu.h"
+#include "odometry.h"
 
 bool is_race_started(void);
 void set_race_started(bool state);
 int8_t check_start_run(void);
 void set_control_debug(bool state);
+void set_control_paused(bool paused);
 
 void set_angular_correction_enabled(bool enabled);
 void set_line_sensors_correction_enabled(bool enabled);
@@ -34,6 +36,7 @@ int32_t get_ideal_linear_speed(void);
 void set_ideal_angular_speed(float angular_speed);
 float get_ideal_angular_speed(void);
 void set_target_fan_speed(int32_t fan_speed, int32_t ms);
+int32_t get_ideal_fan_speed(void);
 
 void control_loop(void);
 

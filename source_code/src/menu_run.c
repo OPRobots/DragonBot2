@@ -59,6 +59,7 @@ static void handle_menu_run_values(void) {
 
   if (modeRun == MODE_RACE) {
     if (valueRun[modeRun] == 1) {
+      check_line_color();
       if (abs(get_line_sensor_position()) < 50) {
         set_RGB_color(50, 0, 50);
       } else if (get_line_sensor_position() >= 50) {

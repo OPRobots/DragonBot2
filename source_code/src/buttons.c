@@ -25,11 +25,11 @@ void check_buttons(void) {
 }
 
 void check_encoder_buttons(void) {
-  if (!menu_run_can_start() && !is_debug_enabled()) {
-    if (get_encoder_left_millimeters() >= 10) {
+  if (!menu_run_can_start() && !is_debug_enabled() && get_encoder_right_speed() == 0) {
+    if (get_encoder_left_ticks() >= MICROMETERS_PER_MILLIMETER * 10 / MICROMETERS_PER_TICK) {
       btn_menu_down = false;
       btn_menu_up = true;
-    } else if (get_encoder_left_millimeters() <= -10) {
+    } else if (get_encoder_left_ticks() <= -(MICROMETERS_PER_MILLIMETER * 10 / MICROMETERS_PER_TICK)) {
       btn_menu_up = false;
       btn_menu_down = true;
     } /*  else {

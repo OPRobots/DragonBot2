@@ -25,24 +25,6 @@ static int16_t mark_sensors_thr[MARK_SENSOR_COUNT];
 
 static bool is_white_line = false;
 
-static void check_line_color(void) {
-  uint8_t sensors_on_black_count = 0;
-  for (uint8_t sensor = 0; sensor <= get_line_sensor_count(); sensor++) {
-    if (get_line_sensor_raw(sensor) >= LINE_SENSOR_MAX_VALUE / 2) {
-      sensors_on_black_count++;
-    }
-  }
-
-  if (sensors_on_black_count == 0 || sensors_on_black_count == get_line_sensor_count()) {
-    uint32_t warning_start_ms = get_clock_ticks();
-    while (get_clock_ticks() - warning_start_ms < 2000) {
-      warning_status_led(50);
-    }
-  } else {
-    is_white_line = sensors_on_black_count >= get_line_sensor_count() / 2;
-  }
-}
-
 uint8_t *get_adc1_channels(void) {
   return adc1_channels;
 }
@@ -65,6 +47,24 @@ uint8_t get_adc2_channel_count(void) {
 
 volatile uint16_t *get_adc2_raw(void) {
   return adc2_raw;
+}
+
+void check_line_color(void) {
+  uint8_t sensors_on_black_count = 0;
+  for (uint8_t sensor = 0; sensor <= get_line_sensor_count(); sensor++) {
+    if (get_line_sensor_raw(sensor) >= LINE_SENSOR_MAX_VALUE / 2) {
+      sensors_on_black_count++;
+    }
+  }
+
+  if (sensors_on_black_count == 0 || sensors_on_black_count == get_line_sensor_count()) {
+    uint32_t warning_start_ms = get_clock_ticks();
+    while (get_clock_ticks() - warning_start_ms < 2000) {
+      warning_status_led(50);
+    }
+  } else {
+    is_white_line = sensors_on_black_count >= get_line_sensor_count() / 2;
+  }
 }
 
 uint8_t get_line_sensor_count(void) {
@@ -161,7 +161,6 @@ uint16_t get_mark_sensor_calibrated(uint8_t index) {
 }
 
 void sensors_calibration(bool force) {
-  check_line_color();
   bool use_eeprom_calibration = true;
   if (!force) {
     while (!get_menu_mode_btn()) {

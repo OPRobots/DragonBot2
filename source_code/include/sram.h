@@ -15,7 +15,7 @@
 #define SRAM_LOG_RING_SIZE 4096u
 
 /* Payload máximo aceptado por registro. Debe cubrir el mayor struct de log. */
-#define SRAM_LOG_MAX_PAYLOAD 64u
+#define SRAM_LOG_MAX_PAYLOAD 80u
 
 /* Número máximo de registros que se vuelcan en una pasada del flusher. */
 #define SRAM_LOG_FLUSH_BATCH_MAX 8u
@@ -68,6 +68,17 @@ typedef struct __attribute__((packed)) {
   float position_x;
   float position_y;
   float angle;
+  float linear_speed;
+  float encoder_omega;
+  float encoder_v;
+  float gyro_rate;
+  float gyro_bias;
+  uint8_t slip;
+  float dt;
+  int32_t line_offset;
+  float var_x;
+  float var_y;
+  float var_theta;
 } odometry_log_t;
 
 /*
