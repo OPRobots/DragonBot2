@@ -35,6 +35,8 @@ void blink_RGB_color(uint32_t r, uint32_t g, uint32_t b, uint32_t ms);
 void check_leds_while(void);
 void set_leds_mpu(uint16_t ms);
 void set_leds_sensors(uint16_t ms);
+void set_leds_wheel_separation(uint16_t ms);
+void set_leds_wheel_scale(uint16_t ms);
 void set_leds_blink(uint16_t ms);
 void set_leds_battery_level(float battery_level);
 void all_leds_clear(void);

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "eeprom.h"
 #include "leds.h"
 #include "sensors.h"
 
@@ -20,9 +21,10 @@ enum ROBOT_VERSION {
 };
 
 #define MICROMETERS_PER_TICK 70.43493572812115
-#define ROBOT_WIDTH 70.2
-#define WHEELS_SEPARATION 62
-#define ROBOT_MIDDLE_WIDTH ((ROBOT_WIDTH / 2.0))
+#define WHEELS_SEPARATION 119.7
+
+/* Distancia patrón (mm) para la auto-calibración de la escala de rueda. El robot debe recorrerse exactamente esta distancia entre el reset y la confirmación. */
+#define WHEEL_SCALE_CALIBRATION_MM 2000.0f
 
 #define MAX_MOTOR_SATURATION_COUNT 30
 #define MAX_MOTOR_ANGULAR_SATURATION_COUNT 60
@@ -65,5 +67,14 @@ uint16_t get_config_run(void);
 
 uint16_t get_offtrack_time(void);
 uint16_t get_start_millis(void);
+
+#define WHEEL_SCALE_DATA_LENGTH 1
+#define WHEELS_SEPARATION_DATA_LENGTH 1
+
+float get_micrometers_per_tick(void);
+float get_wheels_separation(void);
+void config_set_micrometers_per_tick(float value);
+void config_set_wheels_separation(float value);
+void config_load_eeprom(void);
 
 #endif

@@ -20,6 +20,12 @@ static uint32_t leds_sensors_last_ms = 0;
 static int8_t leds_sensors_current_step = 1;
 static uint8_t leds_sensors_current_index = 0;
 
+static uint32_t leds_wheels_separation_last_ms = 0;
+static bool leds_wheels_separation_blink_state = false;
+
+static uint32_t leds_wheel_scale_last_ms = 0;
+static int8_t leds_wheel_scale_current_index = 0;
+
 static uint32_t blink_last_ms = 0;
 
 static uint32_t battery_warning_last_ms = 0;
@@ -184,6 +190,43 @@ void set_leds_sensors(uint16_t ms) {
 
     leds_sensors_current_index += leds_sensors_current_step;
     leds_sensors_last_ms = get_clock_ticks();
+  }
+}
+
+void set_leds_wheel_separation(uint16_t ms) {
+  if (get_clock_ticks() > leds_wheels_separation_last_ms + ms) {
+    set_info_led(INFO_LED_1, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_2, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_3, false);
+    set_info_led(INFO_LED_4, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_5, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_A, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_B, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_C, false);
+    set_info_led(INFO_LED_D, leds_wheels_separation_blink_state);
+    set_info_led(INFO_LED_E, leds_wheels_separation_blink_state);
+
+    leds_wheels_separation_blink_state = !leds_wheels_separation_blink_state;
+    leds_wheels_separation_last_ms = get_clock_ticks();
+  }
+}
+
+void set_leds_wheel_scale(uint16_t ms) {
+  if (get_clock_ticks() > leds_wheel_scale_last_ms + ms) {
+    set_info_led(INFO_LED_4, true);
+    set_info_led(INFO_LED_5, true);
+    set_info_led(INFO_LED_D, true);
+    set_info_led(INFO_LED_E, true);
+
+    set_info_led(INFO_LED_3, leds_wheel_scale_current_index == 0);
+    set_info_led(INFO_LED_2, leds_wheel_scale_current_index == 1);
+    set_info_led(INFO_LED_1, leds_wheel_scale_current_index == 2);
+    set_info_led(INFO_LED_C, leds_wheel_scale_current_index == 0);
+    set_info_led(INFO_LED_B, leds_wheel_scale_current_index == 1);
+    set_info_led(INFO_LED_A, leds_wheel_scale_current_index == 2);
+
+    leds_wheel_scale_current_index = (leds_wheel_scale_current_index + 1) % 3;
+    leds_wheel_scale_last_ms = get_clock_ticks();
   }
 }
 

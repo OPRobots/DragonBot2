@@ -1,5 +1,8 @@
 #include "eeprom.h"
 
+/* Los índices deben caber dentro del buffer. Si falla, revisar DATA_INDEX_*. */
+typedef char eeprom_static_assert_index_fits[(DATA_INDEX_MARK_SENSORS_THR + MARK_SENSORS_DATA_LENGTH <= DATA_LENGTH) ? 1 : -1];
+
 static int16_t eeprom_data[DATA_LENGTH];
 
 void eeprom_save(void) {
@@ -34,6 +37,7 @@ void eeprom_load(void) {
   sensors_load_eeprom();
   menu_run_load_values();
   rc5_load_eeprom();
+  config_load_eeprom();
 }
 
 void eeprom_clear(void) {
