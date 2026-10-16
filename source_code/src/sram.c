@@ -835,10 +835,10 @@ static void sram_print_control_log(const void *data, uint16_t size) {
     return;
   }
   const control_log_t *log = (const control_log_t *)data;
-  printf("t=%ld,target_linear_speed=%d,ideal_linear_speed=%d,measured_linear_speed=%.2f,left_measured_linear_speed=%.2f,right_measured_linear_speed=%.2f,ideal_angular_speed=%.2f,measured_angular_speed=%.2f,pwm_left=%d,pwm_right=%d,battery_voltage=%.2f\n", log->timestamp_ms,
+  printf("t=%ld,target_linear_speed=%d,ideal_linear_speed=%d,measured_linear_speed=%.2f,left_measured_linear_speed=%.2f,right_measured_linear_speed=%.2f,ideal_angular_speed=%.2f,measured_angular_speed=%.2f,pwm_left=%d,pwm_right=%d,angular_voltage=%.3f,line_offset=%ld,battery_voltage=%.2f\n", log->timestamp_ms,
          (int)log->target_linear_speed, (int)log->ideal_linear_speed, log->measured_linear_speed, log->left_measured_linear_speed,
          log->right_measured_linear_speed, log->ideal_angular_speed, log->measured_angular_speed, log->pwm_left, log->pwm_right,
-         log->battery_voltage);
+         log->angular_voltage, (long)log->line_offset, log->battery_voltage);
 }
 
 static void sram_print_odometry_log(const void *data, uint16_t size) {
@@ -852,6 +852,15 @@ static void sram_print_odometry_log(const void *data, uint16_t size) {
          log->right_millimeters, log->position_x, log->position_y, log->angle, log->linear_speed, log->encoder_omega,
          log->encoder_v, log->gyro_rate, log->gyro_bias, (int)log->slip, log->dt, (long)log->line_offset, log->var_x,
          log->var_y, log->var_theta);
+}
+
+static void sram_print_yaw_step_log(const void *data, uint16_t size) {
+  if (size != sizeof(yaw_step_log_t)) {
+    printf("ERROR  [yawstep size mismatch %u vs %u]\n", size, (uint16_t)sizeof(yaw_step_log_t));
+    return;
+  }
+  const yaw_step_log_t *log = (const yaw_step_log_t *)data;
+  printf("YAWSTEP,%ld,%d,%d,%.5f\n", (long)log->timestamp_ms, (int)log->rep, (int)log->pwm, log->gyro_rate);
 }
 
 void sram_print_logs(sram_record_type_t type) {
@@ -880,6 +889,9 @@ void sram_print_logs(sram_record_type_t type) {
         break;
       case SRAM_TYPE_ODOMETRY:
         sram_print_odometry_log(&buffer.odometry, stored_size);
+        break;
+      case SRAM_TYPE_YAW_STEP:
+        sram_print_yaw_step_log(&buffer.yaw_step, stored_size);
         break;
       default:
         printf("ERROR  [unknown type 0x%02X, %u bytes]\n", rec_type, stored_size);

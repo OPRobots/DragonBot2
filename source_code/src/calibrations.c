@@ -123,6 +123,71 @@ static void calibrate_wheel_scale(void) {
   }
 }
 
+/**
+ * @brief Test T1 — escalón de guiñada en el sitio.
+ *
+ * Con el control pausado y el robot quieto (v=0), aplica un escalón de comando
+ * diferencial (set_motors_pwm(+D, -D)) y muestrea el gyro a 1 kHz. Sirve para
+ * identificar la dinámica comando -> velocidad de guiñada (G_motor: ganancia K y
+ * constante de tiempo tau). Guarda las muestras en SRAM (tipo SRAM_TYPE_YAW_STEP)
+ * para volcarlas después con el robot parado.
+ */
+#define YAW_STEP_PWM 100     /* magnitud del escalón diferencial (0..1049) */
+#define YAW_STEP_BASELINE 50 /* muestras (ms) antes del escalón */
+#define YAW_STEP_SAMPLES 400 /* muestras (ms) totales por repetición */
+#define YAW_STEP_REPS 3
+
+static void calibrate_yaw_step(void) {
+  yaw_step_log_t rec;
+
+  set_control_paused(true);
+  set_RGB_color(0, 125, 0);
+
+  for (int rep = 0; rep < YAW_STEP_REPS; rep++) {
+    uint32_t last = get_clock_ticks();
+
+    /* Base (motores parados) */
+    for (int i = 0; i < YAW_STEP_BASELINE; i++) {
+      while (get_clock_ticks() == last) {
+      }
+      last = get_clock_ticks();
+      rec.timestamp_ms = last;
+      rec.rep = (uint16_t)rep;
+      rec.pwm = 0;
+      rec.gyro_rate = lsm6dsr_get_gyro_z_radps();
+      sram_log(SRAM_TYPE_YAW_STEP, &rec, sizeof(rec));
+    }
+
+    /* Escalón de comando -> giro en el sitio */
+    set_motors_pwm(YAW_STEP_PWM, -YAW_STEP_PWM);
+    for (int i = YAW_STEP_BASELINE; i < YAW_STEP_SAMPLES; i++) {
+      while (get_clock_ticks() == last) {
+      }
+      last = get_clock_ticks();
+      rec.timestamp_ms = last;
+      rec.rep = (uint16_t)rep;
+      rec.pwm = YAW_STEP_PWM;
+      rec.gyro_rate = lsm6dsr_get_gyro_z_radps();
+      sram_log(SRAM_TYPE_YAW_STEP, &rec, sizeof(rec));
+    }
+    set_motors_speed(0, 0);
+    set_motors_brake();
+
+    set_info_leds();
+    delay(1000);
+    clear_info_leds();
+  }
+
+  while (!get_menu_select_btn()) {
+    set_RGB_rainbow();
+  }
+
+  sram_print_logs(SRAM_TYPE_YAW_STEP);
+
+  set_RGB_color(0, 0, 0);
+  set_control_paused(false);
+}
+
 void calibrate_from_config(uint8_t type) {
   if (type != CALIBRATE_NONE) {
     check_calibration_active();
@@ -145,6 +210,9 @@ void calibrate_from_config(uint8_t type) {
         break;
       case CALIBRATE_WHEEL_SCALE:
         calibrate_wheel_scale();
+        break;
+      case CALIBRATE_YAW_STEP:
+        calibrate_yaw_step();
         break;
       case CALIBRATE_STORE_EEPROM:
         eeprom_save();

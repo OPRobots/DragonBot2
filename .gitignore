@@ -8,3 +8,4 @@ desktop.ini
 
 # KiCad Local History (repositorio git interno, no debe versionarse en el repo padre)
 .history/
+source_code/tools/__pycache__/*

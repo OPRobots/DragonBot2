@@ -40,6 +40,7 @@ enum {
   SRAM_TYPE_ANY = 0x00,
   SRAM_TYPE_CONTROL = 0x01,
   SRAM_TYPE_ODOMETRY = 0x02,
+  SRAM_TYPE_YAW_STEP = 0x03,
   /* ── USER TYPES (0x03 – 0xFE) ── */
   SRAM_TYPE_INVALID = 0xFE,
 };
@@ -55,6 +56,8 @@ typedef struct __attribute__((packed)) {
   float measured_angular_speed;
   int16_t pwm_left;
   int16_t pwm_right;
+  float angular_voltage;
+  int32_t line_offset;
   float battery_voltage;
 } control_log_t;
 
@@ -81,6 +84,14 @@ typedef struct __attribute__((packed)) {
   float var_theta;
 } odometry_log_t;
 
+/* Test T1 (escalón de guiñada en el sitio): una muestra por ms. */
+typedef struct __attribute__((packed)) {
+  uint32_t timestamp_ms;
+  uint16_t rep;
+  int16_t pwm; /* 0 en la base, YAW_STEP_PWM durante el escalón */
+  float gyro_rate;
+} yaw_step_log_t;
+
 /*
  * Buffer de interpretación de registros SRAM.
  * Agregar aquí todo struct de log nuevo para que el buffer crezca solo;
@@ -89,6 +100,7 @@ typedef struct __attribute__((packed)) {
 typedef union {
   control_log_t control;
   odometry_log_t odometry;
+  yaw_step_log_t yaw_step;
 } sram_log_t;
 
 typedef enum {

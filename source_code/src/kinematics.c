@@ -1,40 +1,23 @@
 #include <kinematics.h>
 
-static struct kpi_params kpi_test[] = {
-    [KPI_LINEAR] = {
-        .kp = 0.003,
-        .ki = 0.0002,
-        .kd = 0.00,
-    },
-    [KPI_ANGULAR] = {
-        .kp = 0.0,
-        .ki = 0.0,
-        .kd = 0.0,
-    },
-    [KPI_LINE_SENSORS] = {
-        .kp = 0.0025,
-        .ki = 0.0,
-        .kd = 0.03,
-    },
-};
+/*
+ * Conjunto de KPI por estrategia. Los KPI_LINEAR/KPI_ANGULAR son comunes; los de
+ * línea (KPI_LINE_SENSORS) están escalados desde la referencia de SPEED_TEST
+ * (kp=0.005, kd=0.03 a 2000 mm/s) por la regla ∝ 1/v (ver .features/pid_tuning).
+ */
+#define KPI_SET(line_kp, line_ki, line_kd)                                  \
+  {                                                                         \
+    [KPI_LINEAR] = {.kp = 0.003, .ki = 0.0002, .kd = 0.00},                 \
+    [KPI_ANGULAR] = {.kp = 0.0, .ki = 0.0, .kd = 0.0},                      \
+    [KPI_LINE_SENSORS] = {.kp = line_kp, .ki = line_ki, .kd = line_kd},     \
+  }
 
-static struct kpi_params kpi_run[] = {
-    [KPI_LINEAR] = {
-        .kp = 0.003,
-        .ki = 0.0002,
-        .kd = 0.00,
-    },
-    [KPI_ANGULAR] = {
-        .kp = 0.0,
-        .ki = 0.0,
-        .kd = 0.0,
-    },
-    [KPI_LINE_SENSORS] = {
-        .kp = 0.0,
-        .ki = 0.0,
-        .kd = 0.0,
-    },
-};
+static struct kpi_params kpi_test[] = KPI_SET(0.005, 0.0, 0.030);      /* v=2000 (referencia) */
+static struct kpi_params kpi_normal[] = KPI_SET(0.0040, 0.0, 0.024);   /* v=2500 */
+static struct kpi_params kpi_medium[] = KPI_SET(0.003333, 0.0, 0.020); /* v=3000 */
+static struct kpi_params kpi_fast[] = KPI_SET(0.00367, 0.0, 0.01971); /* v=3500 */
+static struct kpi_params kpi_super[] = KPI_SET(0.002667, 0.0, 0.0160); /* v=3750 */
+static struct kpi_params kpi_haki[] = KPI_SET(0.0025, 0.0, 0.0150);    /* v=4000 */
 
 static struct kinematics kinematics_settings[] = {
     [SPEED_TEST] = {
@@ -61,7 +44,7 @@ static struct kinematics kinematics_settings[] = {
             .accel_soft = 0,
         },
         .fan_speed = 20,
-        .kpi = kpi_run,
+        .kpi = kpi_normal,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
             .low_pass_filter_alpha = 0.27f,
@@ -76,7 +59,7 @@ static struct kinematics kinematics_settings[] = {
             .accel_soft = 0,
         },
         .fan_speed = 35,
-        .kpi = kpi_run,
+        .kpi = kpi_medium,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
             .low_pass_filter_alpha = 0.27f,
@@ -91,7 +74,7 @@ static struct kinematics kinematics_settings[] = {
             .accel_soft = 15000,
         },
         .fan_speed = 45,
-        .kpi = kpi_run,
+        .kpi = kpi_fast,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
             .low_pass_filter_alpha = 0.27f,
@@ -106,7 +89,7 @@ static struct kinematics kinematics_settings[] = {
             .accel_soft = 20000,
         },
         .fan_speed = 50,
-        .kpi = kpi_run,
+        .kpi = kpi_super,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
             .low_pass_filter_alpha = 0.27f,
@@ -121,7 +104,7 @@ static struct kinematics kinematics_settings[] = {
             .accel_soft = 25000,
         },
         .fan_speed = 60,
-        .kpi = kpi_run,
+        .kpi = kpi_haki,
         .mpu = {
             .full_scale_dps = MPU_FULL_SCALE_2000DPS,
             .low_pass_filter_alpha = 0.27f,

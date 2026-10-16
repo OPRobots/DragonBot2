@@ -131,7 +131,7 @@ void debug_from_config(uint8_t type) {
     switch (type) {
       case DEBUG_MACROARRAY:
         // debug_macroarray();
-        sram_print_logs(SRAM_TYPE_ODOMETRY);
+        sram_print_logs(SRAM_TYPE_CONTROL);
         debug_enabled = false;
         menu_config_reset_values();
         break;
