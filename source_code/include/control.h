@@ -19,6 +19,7 @@
 
 bool is_race_started(void);
 void set_race_started(bool state);
+void get_race_finish_ms(void);
 int8_t check_start_run(void);
 void set_control_debug(bool state);
 void set_control_paused(bool paused);

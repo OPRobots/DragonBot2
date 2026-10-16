@@ -25,7 +25,7 @@ void check_buttons(void) {
 }
 
 void check_encoder_buttons(void) {
-  if (!menu_run_can_start() && !is_debug_enabled() && get_encoder_right_speed() == 0) {
+  if (!menu_run_can_start() && !is_debug_enabled() && (get_race_finish_ms() == 0 || get_clock_ticks() - get_race_finish_ms() >= 3000)) {
     if (get_encoder_left_ticks() >= MICROMETERS_PER_MILLIMETER * 10 / MICROMETERS_PER_TICK) {
       btn_menu_down = false;
       btn_menu_up = true;

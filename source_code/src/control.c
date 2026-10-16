@@ -124,6 +124,10 @@ void set_race_started(bool state) {
   }
 }
 
+uint32_t get_race_finish_ms(void) {
+  return race_finish_ms;
+}
+
 void set_control_debug(bool state) {
   control_debug = state;
 }
@@ -326,6 +330,8 @@ void control_loop(void) {
         .measured_angular_speed = get_measured_angular_speed(),
         .pwm_left = pwm_left,
         .pwm_right = pwm_right,
+        .angular_voltage = angular_voltage,
+        .line_offset = get_line_sensor_position(),
         .battery_voltage = get_battery_voltage(),
     };
     sram_log(SRAM_TYPE_CONTROL, &control_log, sizeof(control_log));
