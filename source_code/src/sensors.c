@@ -57,12 +57,7 @@ void check_line_color(void) {
     }
   }
 
-  if (sensors_on_black_count == 0 || sensors_on_black_count == get_line_sensor_count()) {
-    uint32_t warning_start_ms = get_clock_ticks();
-    while (get_clock_ticks() - warning_start_ms < 2000) {
-      warning_status_led(50);
-    }
-  } else {
+  if (!(sensors_on_black_count == 0 || sensors_on_black_count == get_line_sensor_count())) {
     is_white_line = sensors_on_black_count >= get_line_sensor_count() / 2;
   }
 }
