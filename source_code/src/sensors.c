@@ -461,13 +461,13 @@ void line_sensors_update_position(void) {
   int8_t sensor_reference_index = round(map(line_position, -1000, 1000, -1, get_line_sensor_count()));
   if (sensor_reference_index <= 0) {
     sensor_first_line_index = 0;
-    sensor_last_line_index = 3;
+    sensor_last_line_index = 6;
   } else if (sensor_reference_index >= get_line_sensor_count() - 1) {
-    sensor_first_line_index = get_line_sensor_count() - 4;
+    sensor_first_line_index = get_line_sensor_count() - 7;
     sensor_last_line_index = get_line_sensor_count() - 1;
   } else {
-    sensor_first_line_index = sensor_reference_index - 2;
-    sensor_last_line_index = sensor_reference_index + 1;
+    sensor_first_line_index = sensor_reference_index - 4;
+    sensor_last_line_index = sensor_reference_index + 2;
     if (sensor_first_line_index < 0) {
       sensor_last_line_index += abs(sensor_first_line_index);
       sensor_first_line_index = 0;
@@ -477,7 +477,7 @@ void line_sensors_update_position(void) {
       sensor_last_line_index = get_line_sensor_count() - 1;
     }
   }
-  // printf("%d - %d\t|\t", sensor_first_line_index, sensor_last_line_index);
+  // printf("pos: %ld, ref: %d first: %d last: %d\n", line_position, sensor_reference_index, sensor_first_line_index, sensor_last_line_index);
 
   uint32_t sum_wheigted_sensor_values = 0;
   uint32_t sum_sensor_values = 0;
