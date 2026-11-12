@@ -2,7 +2,7 @@
 
 /*
  * Conjunto de KPI por estrategia. Los KPI_LINEAR/KPI_ANGULAR son comunes; los de
- * línea (KPI_LINE_SENSORS) están escalados desde la referencia de SPEED_TEST
+ * línea (KPI_LINE_SENSORS) están escalados desde la referencia de SPEED_EXPLORE
  * (kp=0.005, kd=0.03 a 2000 mm/s) por la regla ∝ 1/v (ver .features/pid_tuning).
  */
 #define KPI_SET(line_kp, line_ki, line_kd)                                  \
@@ -20,7 +20,7 @@ static struct kpi_params kpi_super[] = KPI_SET(0.002667, 0.0, 0.0160); /* v=3750
 static struct kpi_params kpi_haki[] = KPI_SET(0.0025, 0.0, 0.0150);    /* v=4000 */
 
 static struct kinematics kinematics_settings[] = {
-    [SPEED_TEST] = {
+    [SPEED_EXPLORE] = {
         .linear_speed = 2000,
         .linear_accel = {
             .break_accel = 5000,
@@ -114,7 +114,7 @@ static struct kinematics kinematics_settings[] = {
 static struct kinematics kinematics;
 
 void setup_kinematics(void) {
-  kinematics = kinematics_settings[SPEED_TEST];
+  kinematics = kinematics_settings[SPEED_EXPLORE];
 }
 
 void configure_kinematics(enum speed_strategy speed) {

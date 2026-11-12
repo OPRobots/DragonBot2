@@ -37,7 +37,7 @@ empeora. En ese regimen resdB NO es fiable: la herramienta lo marca como
 PIERDE LINEA y recomienda SUBIR kp (el problema es subviraje / velocidad alta,
 no falta de margen). El recorte se mide como la fraccion de |e| >= 999.
 
-En el barrido real (SPEED_TEST, 2000) se midio que resdB sube ~11 dB por cada
+En el barrido real (SPEED_EXPLORE, 2000) se midio que resdB sube ~11 dB por cada
 2x de kp (11 dB/octava). De ahi la prediccion:
 
     kp_nuevo = kp_actual * 2 ** ((resdB_objetivo - resdB_medido) / 11)
@@ -102,7 +102,7 @@ RES_HF_HZ = (6.0, 25.0)  # banda donde asoma la resonancia del lazo
 DEFAULT_TARGET_RES_DB = -4.0
 DEFAULT_RES_MAX_DB = -1.0
 
-# Regla empirica (SPEED_TEST, 2000 mm/s): resdB sube ~11 dB por 2x de kp.
+# Regla empirica (SPEED_EXPLORE, 2000 mm/s): resdB sube ~11 dB por 2x de kp.
 DEFAULT_SLOPE_DB_PER_OCT = 11.0
 
 # Umbrales de chatter (rms de |dPWM| por rueda, PWM sobre 1049).

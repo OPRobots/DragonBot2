@@ -1,6 +1,5 @@
 #include <calibrations.h>
 
-
 bool calibration_enabled = false;
 
 static void check_calibration_active(void) {
@@ -77,10 +76,7 @@ static void calibrate_wheel_separation(void) {
     eeprom_set_data(DATA_INDEX_WHEEL_SEPARATION, &stored, 1);
     printf("theta= %.3frad, delta= %.1fum -> separation= %.3fmm\n", measured_theta, delta_um, separation);
   } else {
-    uint32_t warning_start_ms = get_clock_ticks();
-    while (get_clock_ticks() - warning_start_ms < 2000) {
-      warning_status_led(50);
-    }
+    warning_status_led_timeout(50, 2000);
   }
 }
 
@@ -116,10 +112,7 @@ static void calibrate_wheel_scale(void) {
     eeprom_set_data(DATA_INDEX_WHEEL_SCALE, &stored, 1);
     printf("avg_ticks=%.0f -> um/tick=%.3f\n", avg_ticks, micrometers_per_tick);
   } else {
-    uint32_t warning_start_ms = get_clock_ticks();
-    while (get_clock_ticks() - warning_start_ms < 2000) {
-      warning_status_led(50);
-    }
+    warning_status_led_timeout(50, 2000);
   }
 }
 

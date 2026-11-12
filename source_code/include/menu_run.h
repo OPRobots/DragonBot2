@@ -10,7 +10,7 @@
 #define MENU_RUN_NUM_MODES 6
 
 enum speed_strategy {
-  SPEED_TEST = 0,
+  SPEED_EXPLORE = 0,
   SPEED_NORMAL = 1,
   SPEED_MEDIUM = 2,
   SPEED_FAST = 3,

@@ -86,7 +86,7 @@ El repositorio incluye dos placas diseñadas en KiCad (proyecto, gerbers y BOM):
 - La **IMU** se lee por SPI con *data-ready*; el LSM6DSR se configura a ODR 833 Hz **sin filtro hardware** (medida cruda para el estimador).
 - **Odometría con EKF de 6 estados** `[x, y, θ, v, ω, bias_gyro]`, con `dt` real medido por DWT, **ZUPT** y **detección de derrape**.
 - **Lazo de control a 1 kHz** con PID de velocidad lineal y PID de posición de línea (angular) que reparte la tensión entre las ruedas, con **compensación de la tensión de batería**.
-- **Estrategias de velocidad**: `SPEED_TEST`, `SPEED_NORMAL`, `SPEED_MEDIUM`, `SPEED_FAST`, `SPEED_SUPER` y `SPEED_HAKI` (2000–4000 mm/s), con ganancias escaladas ∝ 1/v.
+- **Estrategias de velocidad**: `SPEED_EXPLORE`, `SPEED_NORMAL`, `SPEED_MEDIUM`, `SPEED_FAST`, `SPEED_SUPER` y `SPEED_HAKI` (2000–4000 mm/s), con ganancias escaladas ∝ 1/v.
 - **Menú** de configuración y de *run* por LEDs, manejable con botones y con **mando RC5**; los parámetros se persisten en EEPROM.
 - **Calibraciones**: offset del giroscopio, sensores, separación de ruedas (girando 2π con el gyro), escala de rueda (distancia patrón) y escalón de rotación (test T1).
 - **Registro a bordo**: log en la **SRAM SPI de 512 KB** (ring en RAM + volcado diferido en los slots del SysTick), volcado por serie para análisis offline.

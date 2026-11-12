@@ -11,7 +11,7 @@
 > diagnóstico).
 
 > **Decisiones cerradas (D1–D5):**
-> **D1** = velocidad base de pruebas = **`SPEED_TEST` (`linear_speed = 2000`)**. Las de carrera se derivan
+> **D1** = velocidad base de pruebas = **`SPEED_EXPLORE` (`linear_speed = 2000`)**. Las de carrera se derivan
 > después por escalado `∝ 1/v`: `SPEED_NORMAL = 2500`, `SPEED_MEDIUM = 3000`, `SPEED_FAST = 3500`,
 > `SPEED_SUPER = 3750`, `SPEED_HAKI = 4000`.
 > **D2** = **sin amortiguación por gyro** (`KPI_ANGULAR` se mantiene a 0): en curvas opondría el giro
@@ -29,7 +29,7 @@
 - **Seguro**: todos los test mantienen el **seguimiento de línea activo** (o sin traslación) para no
   chocar.
 - **Reproducible**: test concretos + logs a 1 kHz + análisis offline.
-- **Extensible**: empezar por `SPEED_TEST` (2000), luego replicar/escalar por velocidad.
+- **Extensible**: empezar por `SPEED_EXPLORE` (2000), luego replicar/escalar por velocidad.
 
 Fuera de alcance por ahora: control de trayectoria basado en odometría, control de rumbo absoluto.
 
@@ -60,7 +60,7 @@ angular_voltage =
 ### 2.3 Ganancias actuales (`kinematics.c`, por estrategia)
 | Estrategia | v (mm/s) | `KPI_LINEAR` (velocidad) | `KPI_LINE_SENSORS` (línea) |
 |---|---|---|---|
-| `SPEED_TEST` (`kpi_test`) | 2000 | 0.003 / 0.0002 / 0 | **0.005 / 0 / 0.03** (referencia) |
+| `SPEED_EXPLORE` (`kpi_test`) | 2000 | 0.003 / 0.0002 / 0 | **0.005 / 0 / 0.03** (referencia) |
 | `SPEED_NORMAL` (`kpi_normal`) | 2500 | idem | 0.0040 / 0 / 0.024 |
 | `SPEED_MEDIUM` (`kpi_medium`) | 3000 | idem | 0.003333 / 0 / 0.020 |
 | `SPEED_FAST` (`kpi_fast`) | 3500 | idem | 0.002857 / 0 / 0.01714 |
@@ -68,7 +68,7 @@ angular_voltage =
 | `SPEED_HAKI` (`kpi_haki`) | 4000 | idem | 0.0025 / 0 / 0.0150 |
 
 > `KPI_ANGULAR` = 0 en todas (D2). Las ganancias de carrera están **escaladas `∝ 1/v`** desde
-> `SPEED_TEST` (F2.4 / D5) y quedan **pendientes de finetunear en pista** velocidad por velocidad (F4.1).
+> `SPEED_EXPLORE` (F2.4 / D5) y quedan **pendientes de finetunear en pista** velocidad por velocidad (F4.1).
 
 ### 2.4 Sensor de línea
 - **24 sensores** (`LINE_SENSOR_COUNT`), leídos por 3 multiplexores de 8 (`MUX_CHANNEL_COUNT = 8`).
@@ -126,7 +126,7 @@ Consecuencia: la **ganancia del lazo es proporcional a `v`** → a más velocida
 - Registrar `ω` (`gyro_rate`) y el comando → obtener `K` (ganancia) y `τ` (63 %).
 
 ### T2 — Identificación en lazo cerrado
-- Run **normal** a `SPEED_TEST` (2000) siguiendo la línea (rectas + curvas).
+- Run **normal** a `SPEED_EXPLORE` (2000) siguiendo la línea (rectas + curvas).
 - Registrar `line_error`, `u` (comando angular), `pwm_*`, `ω`, `v`.
 - Ajustar `G_motor(s)` y validar `P(s)` con `e ≈ −v·∫∫ω`.
 
@@ -213,7 +213,7 @@ Ambos forman parte de runs normales: no requieren modos de test nuevos.
 
 ### Fase 2 — Ajuste de ganancias (empírico en pista) ✅
 - [x] Barrido de `kp`/`kd` con el log de control, comparando `e_RMS`, oscilación y chatter del PWM.
-- [x] Resultado (mismo circuito, SPEED_TEST), ya automatizado con el script (§12):
+- [x] Resultado (mismo circuito, SPEED_EXPLORE), ya automatizado con el script (§12):
 
 | Caso | kp | kd | e_RMS | e_LF | resdB | |ΔPWM| med |
 |---|---|---|---|---|---|---|
@@ -241,7 +241,7 @@ Ambos forman parte de runs normales: no requieren modos de test nuevos.
 
 ### Fase 4 — Extensión por velocidad ✅ (por escalado)
 - [x] F4.1 Ganancias por estrategia implementadas en `kinematics.c` (`kpi_normal`…`kpi_haki`),
-      **escaladas `∝ 1/v`** desde la referencia de `SPEED_TEST` (D5). Pendiente de finetunear en pista.
+      **escaladas `∝ 1/v`** desde la referencia de `SPEED_EXPLORE` (D5). Pendiente de finetunear en pista.
 - [ ] F4.2 (Opcional) ganancias adaptativas según velocidad.
 
 **Estado:** ✅ (escalado); finetuning por velocidad pendiente.
@@ -267,7 +267,7 @@ Campos mínimos por muestra: `line_error`, `u` (comando angular), `pwm_left/righ
 ### Solo el usuario (físico/criterio)
 - Preparar la pista (rectas, curva amplia, curvas cerradas).
 - Ejecutar T1/T2/T3 en la pista y volcar los logs.
-- Decidir la métrica objetivo (tiempo vs estabilidad) y confirmar la velocidad base (`SPEED_TEST`, 2000).
+- Decidir la métrica objetivo (tiempo vs estabilidad) y confirmar la velocidad base (`SPEED_EXPLORE`, 2000).
 
 ### Agente (offline, desde logs)
 - Identificar `G_motor` y la planta.
@@ -284,13 +284,13 @@ Campos mínimos por muestra: `line_error`, `u` (comando angular), `pwm_left/righ
 
 ## 9. Decisiones
 
-- [x] **D1** Velocidad base de pruebas: **`SPEED_TEST` (`linear_speed = 2000`)** (más prudente). Las de
+- [x] **D1** Velocidad base de pruebas: **`SPEED_EXPLORE` (`linear_speed = 2000`)** (más prudente). Las de
       carrera (`2500 / 3000 / 3500 / 3750 / 4000`) se derivan por escalado `∝ 1/v`. ✅
 - [x] **D2** **Sin amortiguación por gyro**: `KPI_ANGULAR` se queda a 0. En curvas opondría el giro
       necesario y en linefollower no hay información anticipada de la pista. ✅
 - [x] **D3** `ki = 0` en el lazo de línea (sí se usará `ki` en el lazo de velocidad, Parte A). ✅
 - [x] **D4** **Sin tuning en runtime**: varias runs + recarga de código (menú limpio). ✅
-- [x] **D5** Ganancias **por velocidad**: inferir desde la referencia (`SPEED_TEST`) a las demás y finetunear después. En
+- [x] **D5** Ganancias **por velocidad**: inferir desde la referencia (`SPEED_EXPLORE`) a las demás y finetunear después. En
       concreto: **`KPI_LINEAR` (velocidad) es ≈ independiente de `v`** → **una sola tabla para todas**;
       **`KPI_LINE_SENSORS` (línea) escala `∝ v`** → se derivan de una referencia por **escalado `∝ 1/v`**
       (gain scheduling), o tabla por velocidad. Así, cambiar las velocidades no obliga a re-tunear todo. ✅

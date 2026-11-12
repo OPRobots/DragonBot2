@@ -49,6 +49,14 @@ void warning_status_led(uint32_t ms) {
   }
 }
 
+void warning_status_led_timeout(uint32_t ms, uint32_t timeout) {
+  uint32_t current_ms = get_clock_ticks();
+  while (get_clock_ticks() - current_ms < timeout) {
+    warning_status_led(ms);
+  }
+  set_status_led(false);
+}
+
 bool is_status_led_on(void) {
   return gpio_get(GPIOC, GPIO5);
 }
