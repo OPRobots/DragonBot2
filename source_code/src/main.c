@@ -14,6 +14,19 @@ int main(void) {
   handle_robot_version();
   show_battery_level();
 
+  // set_control_paused(true);
+  // uint32_t fan_speed = 0;
+  // while (1) {
+  //   if (get_menu_mode_btn()) {
+  //     while (get_menu_mode_btn()) {
+  //       set_RGB_color(0, 0, 50);
+  //     }
+  //     fan_speed += 5;
+  //   }
+  //   set_RGB_color(50, 50, 50);
+  //   set_fan_speed(fan_speed);
+  // }
+
   sensors_calibration(false);
 
   while (1) {
