@@ -8,10 +8,12 @@ odometria) o el modo debug en vivo, y:
   - Imprime un resumen (duracion, distancia, rumbo, slip, bias, deriva).
   - Grafica la trayectoria x/y, el rumbo y las velocidades (si hay matplotlib).
 
-Formato de cada linea del log SRAM (sram_print_odometry_log):
-  t=<ms>,left_speed=..,right_speed=..,angular_speed=..,left_mm=..,right_mm=..,
-  pos_x=..,pos_y=..,angle=..,linear_speed=..,encoder_omega=..,gyro_bias=..,
-  slip=..,dt=..,line_offset=..,var_x=..,var_y=..,var_theta=..
+Formato actual (sram_print_odometry_log): una cabecera CSV con los nombres de
+columna al inicio de cada bloque y, debajo, una linea de valores por registro:
+  t,left_speed,right_speed,angular_speed,left_mm,right_mm,pos_x,pos_y,angle,
+  linear_speed,encoder_omega,encoder_v,gyro_rate,gyro_bias,slip,dt,line_offset,
+  var_x,var_y,var_theta
+Tambien acepta el formato antiguo, que repetia `clave=valor` en cada linea.
 
 Uso:
   python3 parse_odometry_log.py odom_log.txt
@@ -37,33 +39,60 @@ FIELDS = [
 REQUIRED = ("left_speed", "pos_x", "pos_y", "angle")
 
 
+def _odometry_header(line):
+    """Devuelve las columnas si @line es una cabecera del log de odometria."""
+    cols = [c.strip() for c in line.split(",")]
+    if cols and cols[0] == "t" and all(req in cols for req in REQUIRED):
+        return cols
+    return None
+
+
+def _parse_key_value(line):
+    """Parsea el formato antiguo (clave=valor,clave=valor,...). None si falla."""
+    record = {}
+    for token in line.split(","):
+        if "=" not in token:
+            continue
+        key, _, value = token.partition("=")
+        try:
+            record[key.strip()] = float(value.strip())
+        except ValueError:
+            return None
+    return record
+
+
 def parse(path):
     """Devuelve un dict {campo: [valores]} a partir del texto capturado."""
     data = defaultdict(list)
     skipped = 0
+    header = None
     with open(path, "r", errors="replace") as fh:
         for raw in fh:
             line = raw.strip()
-            if not line or "=" not in line or "," not in line:
+            if not line:
                 continue
-            if not all(req + "=" in line for req in REQUIRED):
+
+            cols = _odometry_header(line)
+            if cols is not None:
+                header = cols
+                continue
+
+            if "=" in line:
+                record = _parse_key_value(line)
+            elif header is not None:
+                values = [v.strip() for v in line.split(",")]
+                if len(values) != len(header):
+                    skipped += 1
+                    continue
+                try:
+                    record = {k: float(v) for k, v in zip(header, values)}
+                except ValueError:
+                    record = None
+            else:
                 skipped += 1
                 continue
 
-            record = {}
-            ok = True
-            for token in line.split(","):
-                if "=" not in token:
-                    continue
-                key, _, value = token.partition("=")
-                key = key.strip()
-                value = value.strip().rstrip(",")
-                try:
-                    record[key] = float(value)
-                except ValueError:
-                    ok = False
-                    break
-            if not ok:
+            if record is None or not all(req in record for req in REQUIRED):
                 skipped += 1
                 continue
 

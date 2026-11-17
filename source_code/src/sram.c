@@ -829,38 +829,52 @@ bool sram_debug_overflow_test(uint32_t records) {
 //          (double)t_total / (double)slot_cycles, (unsigned long)(t_total / us_div), (unsigned long)cap_slot);
 // }
 
-static void sram_print_control_log(const void *data, uint16_t size) {
+static bool sram_print_control_log(bool print_labels, const void *data, uint16_t size) {
   if (size != sizeof(control_log_t)) {
     printf("ERROR  [control size mismatch %u vs %u]\n", size, (uint16_t)sizeof(control_log_t));
-    return;
+    return false;
   }
   const control_log_t *log = (const control_log_t *)data;
-  printf("t=%ld,target_linear_speed=%d,ideal_linear_speed=%d,measured_linear_speed=%.2f,left_measured_linear_speed=%.2f,right_measured_linear_speed=%.2f,ideal_angular_speed=%.2f,measured_angular_speed=%.2f,pwm_left=%d,pwm_right=%d,angular_voltage=%.3f,line_offset=%ld,battery_voltage=%.2f\n", log->timestamp_ms,
+  if (print_labels) {
+    printf("t,target_linear_speed,ideal_linear_speed,measured_linear_speed,left_measured_linear_speed,right_measured_linear_speed,ideal_angular_speed,measured_angular_speed,pwm_left,pwm_right,angular_voltage,line_offset,battery_voltage\n");
+  }
+
+  printf("%ld,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%.3f,%ld,%.2f\n", log->timestamp_ms,
          (int)log->target_linear_speed, (int)log->ideal_linear_speed, log->measured_linear_speed, log->left_measured_linear_speed,
          log->right_measured_linear_speed, log->ideal_angular_speed, log->measured_angular_speed, log->pwm_left, log->pwm_right,
          log->angular_voltage, (long)log->line_offset, log->battery_voltage);
+  return true;
 }
 
-static void sram_print_odometry_log(const void *data, uint16_t size) {
+static bool sram_print_odometry_log(bool print_labels, const void *data, uint16_t size) {
   if (size != sizeof(odometry_log_t)) {
     printf("ERROR  [odometry size mismatch %u vs %u]\n", size, (uint16_t)sizeof(odometry_log_t));
-    return;
+    return false;
   }
   const odometry_log_t *log = (const odometry_log_t *)data;
-  printf("t=%ld,left_speed=%.2f,right_speed=%.2f,angular_speed=%.2f,left_mm=%ld,right_mm=%ld,pos_x=%.2f,pos_y=%.2f,angle=%.2f,linear_speed=%.2f,encoder_omega=%.2f,encoder_v=%.2f,gyro_rate=%.4f,gyro_bias=%.4f,slip=%d,dt=%.6f,line_offset=%ld,var_x=%.2f,var_y=%.2f,var_theta=%.6f\n", log->timestamp_ms,
+  if (print_labels) {
+    printf("t,left_speed,right_speed,angular_speed,left_mm,right_mm,pos_x,pos_y,angle,linear_speed,encoder_omega,encoder_v,gyro_rate,gyro_bias,slip,dt,line_offset,var_x,var_y,var_theta\n");
+  }
+
+  printf("%ld,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.4f,%.4f,%d,%.6f,%ld,%.2f,%.2f,%.6f\n", log->timestamp_ms,
          log->left_measured_linear_speed, log->right_measured_linear_speed, log->measured_angular_speed, log->left_millimeters,
          log->right_millimeters, log->position_x, log->position_y, log->angle, log->linear_speed, log->encoder_omega,
          log->encoder_v, log->gyro_rate, log->gyro_bias, (int)log->slip, log->dt, (long)log->line_offset, log->var_x,
          log->var_y, log->var_theta);
+  return true;
 }
 
-static void sram_print_yaw_step_log(const void *data, uint16_t size) {
+static bool sram_print_yaw_step_log(bool print_labels, const void *data, uint16_t size) {
   if (size != sizeof(yaw_step_log_t)) {
     printf("ERROR  [yawstep size mismatch %u vs %u]\n", size, (uint16_t)sizeof(yaw_step_log_t));
-    return;
+    return false;
   }
   const yaw_step_log_t *log = (const yaw_step_log_t *)data;
-  printf("YAWSTEP,%ld,%d,%d,%.5f\n", (long)log->timestamp_ms, (int)log->rep, (int)log->pwm, log->gyro_rate);
+  if (print_labels) {
+    printf("t,rep,pwm,gyro_rate\n");
+  }
+  printf("%ld,%d,%d,%.5f\n", (long)log->timestamp_ms, (int)log->rep, (int)log->pwm, log->gyro_rate);
+  return true;
 }
 
 void sram_print_logs(sram_record_type_t type) {
@@ -871,6 +885,7 @@ void sram_print_logs(sram_record_type_t type) {
   // sram_debug_report();
   // printf("sram_print_logs (%d)\n", sram_count_records(type));
 
+  sram_record_type_t last_type = SRAM_TYPE_INVALID;
   sram_iterator_t iterator;
   sram_iterator_init(&iterator, type);
 
@@ -883,19 +898,25 @@ void sram_print_logs(sram_record_type_t type) {
       printf("ERROR  [truncated type 0x%02X: %u bytes > buffer %u]\n", rec_type, stored_size, (uint16_t)sizeof(buffer));
       continue;
     }
+
+    bool print_labels = (rec_type != last_type);
+    bool printed = false;
     switch (rec_type) {
       case SRAM_TYPE_CONTROL:
-        sram_print_control_log(&buffer.control, stored_size);
+        printed = sram_print_control_log(print_labels, &buffer.control, stored_size);
         break;
       case SRAM_TYPE_ODOMETRY:
-        sram_print_odometry_log(&buffer.odometry, stored_size);
+        printed = sram_print_odometry_log(print_labels, &buffer.odometry, stored_size);
         break;
       case SRAM_TYPE_YAW_STEP:
-        sram_print_yaw_step_log(&buffer.yaw_step, stored_size);
+        printed = sram_print_yaw_step_log(print_labels, &buffer.yaw_step, stored_size);
         break;
       default:
         printf("ERROR  [unknown type 0x%02X, %u bytes]\n", rec_type, stored_size);
         break;
+    }
+    if (printed) {
+      last_type = rec_type;
     }
   }
 

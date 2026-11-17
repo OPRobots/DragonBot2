@@ -1,12 +1,12 @@
 #include "battery.h"
 #include "bmp280.h"
 #include "buttons.h"
+#include "dragrace.h"
+#include "linefollower.h"
 #include "odometry.h"
+#include "robotracer.h"
 #include "setup.h"
 #include "sram.h"
-#include "linefollower.h"
-#include "robotracer.h"
-#include "dragrace.h"
 
 int main(void) {
   setup();

@@ -114,25 +114,59 @@ def voltage(pwm_avg, battery):
 # Lectura del log
 # ---------------------------------------------------------------------------
 
+def _control_header(line):
+    """Devuelve las columnas si @line es una cabecera del log de control."""
+    cols = [c.strip() for c in line.split(",")]
+    return cols if cols and cols[0] == "t" and "ideal_linear_speed" in cols else None
+
+
+def _parse_key_value(line):
+    """Parsea el formato antiguo (clave=valor,clave=valor,...). None si falla."""
+    rec = {}
+    for tok in line.split(","):
+        if "=" not in tok:
+            continue
+        k, _, v = tok.partition("=")
+        try:
+            rec[k.strip()] = float(v)
+        except ValueError:
+            return None
+    return rec
+
+
 def read_control_records(path):
-    """Devuelve una lista de segmentos (dict campo -> np.array)."""
+    """Devuelve una lista de segmentos (dict campo -> np.array).
+
+    Acepta el formato CSV actual (cabecera con los nombres de columna al inicio
+    de cada bloque y despues lineas de valores) y el formato antiguo, que
+    repetia `clave=valor` en cada linea.
+    """
     recs = []
+    header = None
     for raw in open(path, errors="replace"):
         s = raw.strip()
-        if "=" not in s or "ideal_linear_speed" not in s:
+        if not s:
             continue
-        rec = {}
-        ok = True
-        for tok in s.split(","):
-            if "=" not in tok:
+
+        cols = _control_header(s)
+        if cols is not None:
+            header = cols
+            continue
+
+        if "=" in s:
+            rec = _parse_key_value(s)
+        elif header is not None:
+            vals = [v.strip() for v in s.split(",")]
+            if len(vals) != len(header):
                 continue
-            k, _, v = tok.partition("=")
             try:
-                rec[k.strip()] = float(v)
+                rec = {k: float(v) for k, v in zip(header, vals)}
             except ValueError:
-                ok = False
-                break
-        if ok and all(req in rec for req in REQUIRED):
+                continue
+        else:
+            continue
+
+        if rec is not None and all(req in rec for req in REQUIRED):
             recs.append(rec)
 
     if not recs:
