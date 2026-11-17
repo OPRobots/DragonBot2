@@ -170,9 +170,11 @@ simple** → conviene dejarlo afinado primero.
 Ambos forman parte de runs normales: no requieren modos de test nuevos.
 
 ### 5.4 Fases
-- [x] S0.1 Log de control disponible: el volcado se cambió a `SRAM_TYPE_CONTROL`; incluye
-      `target/ideal/measured`, izq/der, `pwm_left/right`, `battery_voltage` (el voltaje de comando se
-      deriva de `pwm`). Suficiente para el análisis del lazo de velocidad. ✅
+- [x] S0.1 Log de control disponible: el volcado completo es `SRAM_TYPE_CONTROL_DEBUG` (perfil
+      `LOG_DEBUG_ENABLED=1`, 1 kHz); incluye `target/ideal/measured`, izq/der, `pwm_left/right`,
+      `battery_voltage` (el voltaje de comando se deriva de `pwm`). El log ligero
+      (`SRAM_TYPE_CONTROL`, cada `LOG_DISTANCE_MM`) deja fuera ruedas/PWM y no sirve para este
+      análisis. ✅
 - [x] S1.1 Analizar arranques (S1) de 2–3 runs → estimar retardo y error de seguimiento. ✅
 - [x] S2.1 Ajustar `kp` (respuesta), `ki` (error estacionario), `kd` (normalmente 0). ✅ Ya estaba bien
       afinado: **error estacionario ≈ 0.05 %**, **sobreoscilación ≈ 2 %** → se **mantiene** `KPI_LINEAR`
@@ -191,8 +193,9 @@ Ambos forman parte de runs normales: no requieren modos de test nuevos.
       `measured_linear_speed` (v) queda el **lazo completo** en una sola traza. ✅
 - [x] F0.2 **Modo T1** (giro en el sitio): `CALIBRATE_YAW_STEP` (menú → CALIBRACIÓN). Con el control
       pausado aplica un escalón diferencial (`set_motors_pwm(+100, −100)`) y muestrea el gyro a 1 kHz
-      **guardando en SRAM** (`SRAM_TYPE_YAW_STEP`) para poder volcar **después con el robot parado**
-      (menú → DEBUG → valor 11). `YAW_STEP_PWM/BASELINE/SAMPLES/REPS` ajustables. ✅
+      **guardando en SRAM** (`SRAM_TYPE_YAW_STEP_DEBUG`). El propio modo vuelca el log al terminar
+      (pulsar SELECT). `YAW_STEP_DEBUG_PWM`, `YAW_STEP_DEBUG_BASELINE`, `YAW_STEP_DEBUG_SAMPLES` y
+      `YAW_STEP_DEBUG_REPS` ajustables. ✅
 - [ ] F0.3 **Modo T3**: arranque con offset lateral (o inyección de offset virtual en la línea).
 - [~] F0.4 **Ganancias en runtime**: **descartado (D4)**. Se itera con varias runs + recarga de código.
 - [ ] F0.5 **Anti-windup** del integrador y saturación del comando (relevante sobre todo en Parte A).
@@ -275,7 +278,7 @@ Campos mínimos por muestra: `line_error`, `u` (comando angular), `pwm_left/righ
 - Analizar sobreoscilación/oscilación y comparar runs.
 
 ### Firmware (pendiente, todo opcional)
-- ✅ Ya hecho: log de control ampliado (`angular_voltage`, `line_offset`) y modo **T1** (`SRAM_TYPE_YAW_STEP`).
+- ✅ Ya hecho: log de control ampliado (`angular_voltage`, `line_offset`) y modo **T1** (`SRAM_TYPE_YAW_STEP_DEBUG`).
 - [ ] **T3** (offset lateral al arrancar) — innecesario hasta ahora.
 - [ ] **Anti-windup** del integrador + saturación del comando.
 - [ ] **T4 (dither)** — excitación conocida en recta para identificación rigurosa del modelo (ver §4).

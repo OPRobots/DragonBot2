@@ -39,6 +39,14 @@ uint16_t get_start_millis(void) {
 #endif
 }
 
+bool is_log_debug_enabled(void) {
+  return LOG_DEBUG_ENABLED != 0;
+}
+
+int32_t get_log_distance_mm(void) {
+  return is_log_debug_enabled() ? LOG_DISTANCE_MM_DEBUG : LOG_DISTANCE_MM_NORMAL;
+}
+
 float get_micrometers_per_tick(void) {
   return micrometers_per_tick;
 }

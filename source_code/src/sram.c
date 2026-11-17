@@ -63,6 +63,14 @@ typedef struct __attribute__((packed)) {
 
 /* Comprobaciones en tiempo de compilación de que el buffer del flusher cubre todos los structs de log. Si falla, aumentar SRAM_LOG_MAX_PAYLOAD. */
 typedef char sram_static_assert_control[(sizeof(control_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_control_debug[(sizeof(control_debug_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_odometry[(sizeof(odometry_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_odometry_debug[(sizeof(odometry_debug_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_yaw_step_debug[(sizeof(yaw_step_debug_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_log_macroarray[(sizeof(log_macroarray_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
+typedef char sram_static_assert_log_macroarray_fields[(LOG_MACROARRAY_FIELDS > 0) ? 1 : -1];
+typedef char sram_static_assert_log_macroarray_layout
+    [(sizeof(log_macroarray_t) == (sizeof(uint32_t) + (LOG_MACROARRAY_FIELDS * sizeof(int32_t)))) ? 1 : -1];
 typedef char sram_static_assert_log[(sizeof(sram_log_t) <= (SRAM_LOG_MAX_PAYLOAD)) ? 1 : -1];
 
 static uint8_t sram_ring[SRAM_LOG_RING_SIZE];
@@ -501,8 +509,8 @@ char *sram_free_bytes(void) {
  * ────────────────────────────────────────────────────────────────────────── */
 
 bool sram_log(sram_record_type_t type, const void *data, uint16_t size) {
-  if (data == NULL || size == 0u || size > (uint16_t)SRAM_LOG_MAX_PAYLOAD || type == SRAM_TYPE_ANY || type == SRAM_TYPE_INVALID ||
-      (uint8_t)type == SRAM_TYPE_WRAP) {
+  if (data == NULL || size < (uint16_t)sizeof(uint32_t) || size > (uint16_t)SRAM_LOG_MAX_PAYLOAD || type == SRAM_TYPE_ANY ||
+      type == SRAM_TYPE_INVALID || (uint8_t)type == SRAM_TYPE_WRAP) {
     sram_log_dropped_count++;
     return false;
   }
@@ -524,8 +532,14 @@ bool sram_log(sram_record_type_t type, const void *data, uint16_t size) {
       .type = (uint8_t)type,
       .payload_size = size,
   };
-  head = sram_ring_write(&frame, (uint16_t)sizeof(frame), head);
-  head = sram_ring_write(data, size, head);
+
+  uint32_t timestamp = get_log_timestamp();
+  uint8_t header[sizeof(frame) + sizeof(timestamp)];
+  memcpy(header, &frame, sizeof(frame));
+  memcpy(header + sizeof(frame), &timestamp, sizeof(timestamp));
+
+  head = sram_ring_write(header, (uint16_t)sizeof(header), head);
+  head = sram_ring_write((const uint8_t *)data + sizeof(timestamp), (uint16_t)(size - sizeof(timestamp)), head);
   __asm__ volatile("" ::: "memory");
   sram_ring_head = head;
 
@@ -616,6 +630,26 @@ void sram_store(uint32_t budget_cycles) {
  * Diagnóstico / test
  * ────────────────────────────────────────────────────────────────────────── */
 
+/** @brief Tamaño de payload esperado para un tipo, o -1 si no es válido. */
+static int32_t sram_expected_payload_size(sram_record_type_t type) {
+  switch (type) {
+    case SRAM_TYPE_CONTROL:
+      return (int32_t)sizeof(control_log_t);
+    case SRAM_TYPE_CONTROL_DEBUG:
+      return (int32_t)sizeof(control_debug_log_t);
+    case SRAM_TYPE_ODOMETRY:
+      return (int32_t)sizeof(odometry_log_t);
+    case SRAM_TYPE_ODOMETRY_DEBUG:
+      return (int32_t)sizeof(odometry_debug_log_t);
+    case SRAM_TYPE_YAW_STEP_DEBUG:
+      return (int32_t)sizeof(yaw_step_debug_log_t);
+    case SRAM_TYPE_LOG_MACROARRAY:
+      return (int32_t)sizeof(log_macroarray_t);
+    default:
+      return -1;
+  }
+}
+
 bool sram_debug_validate(void) {
   sram_header_t header;
   sram_read_header(&header);
@@ -636,12 +670,14 @@ bool sram_debug_validate(void) {
   sram_record_type_t type;
   uint8_t buf[SRAM_LOG_MAX_PAYLOAD];
   while (sram_iter_next(&iterator, buf, sizeof(buf), &size, &type)) {
-    if (type != SRAM_TYPE_CONTROL && type != SRAM_TYPE_ODOMETRY) {
+    int32_t expected = sram_expected_payload_size(type);
+    if (expected < 0) {
       printf("FALLO: tipo invalido 0x%02X en registro %lu\n", type, (unsigned long)count);
       return false;
     }
-    if (size != sizeof(control_log_t)) {
-      printf("FALLO: tamano invalido %u en registro %lu\n", size, (unsigned long)count);
+    if (size != (uint16_t)expected) {
+      printf("FALLO: tamano invalido %u (esperado %lu) en registro %lu\n", size, (unsigned long)expected,
+             (unsigned long)count);
       return false;
     }
     count++;
@@ -655,7 +691,15 @@ bool sram_debug_validate(void) {
 static bool sram_debug_test_direct(uint32_t records) {
   sram_format();
 
-  uint16_t payload = (uint16_t)sizeof(control_log_t);
+  static const sram_record_type_t test_types[] = {
+      SRAM_TYPE_CONTROL,
+      SRAM_TYPE_CONTROL_DEBUG,
+      SRAM_TYPE_ODOMETRY,
+      SRAM_TYPE_ODOMETRY_DEBUG,
+      SRAM_TYPE_LOG_MACROARRAY,
+  };
+  const uint32_t num_test_types = (uint32_t)(sizeof(test_types) / sizeof(test_types[0]));
+
   uint8_t data[SRAM_LOG_MAX_PAYLOAD];
   bool ok = true;
 
@@ -664,7 +708,8 @@ static bool sram_debug_test_direct(uint32_t records) {
   for (uint32_t i = 0; i < records; i++) {
     memset(data, 0, sizeof(data));
     memcpy(data, &i, sizeof(i)); /* el timestamp identifica el registro */
-    sram_record_type_t type = (i & 1u) ? SRAM_TYPE_CONTROL : SRAM_TYPE_ODOMETRY;
+    sram_record_type_t type = test_types[i % num_test_types];
+    uint16_t payload = (uint16_t)sram_expected_payload_size(type);
     uint32_t t1 = read_cycle_counter();
     sram_result_t res = sram_write_record(type, data, payload);
     uint32_t d = read_cycle_counter() - t1;
@@ -702,13 +747,15 @@ static bool sram_debug_test_direct(uint32_t records) {
   while (sram_iter_next(&iterator, buf, sizeof(buf), &size, &type)) {
     uint32_t ts;
     memcpy(&ts, buf, sizeof(ts));
-    if (size != payload) {
-      printf("FALLO: tamano %u en registro %lu\n", size, (unsigned long)count);
+    int32_t expected = sram_expected_payload_size(type);
+    if (expected < 0) {
+      printf("FALLO: tipo 0x%02X en registro %lu\n", type, (unsigned long)count);
       ok = false;
       break;
     }
-    if (type != SRAM_TYPE_CONTROL && type != SRAM_TYPE_ODOMETRY) {
-      printf("FALLO: tipo 0x%02X en registro %lu\n", type, (unsigned long)count);
+    if (size != (uint16_t)expected) {
+      printf("FALLO: tamano %u (esperado %lu) en registro %lu\n", size, (unsigned long)expected,
+             (unsigned long)count);
       ok = false;
       break;
     }
@@ -836,6 +883,22 @@ static bool sram_print_control_log(bool print_labels, const void *data, uint16_t
   }
   const control_log_t *log = (const control_log_t *)data;
   if (print_labels) {
+    printf("t,target_linear_speed,ideal_linear_speed,measured_linear_speed,ideal_angular_speed,measured_angular_speed,line_offset,battery_voltage\n");
+  }
+
+  printf("%ld,%d,%d,%.2f,%.2f,%.2f,%ld,%.2f\n", log->timestamp_ms, (int)log->target_linear_speed,
+         (int)log->ideal_linear_speed, log->measured_linear_speed, log->ideal_angular_speed,
+         log->measured_angular_speed, (long)log->line_offset, log->battery_voltage);
+  return true;
+}
+
+static bool sram_print_control_debug_log(bool print_labels, const void *data, uint16_t size) {
+  if (size != sizeof(control_debug_log_t)) {
+    printf("ERROR  [control debug size mismatch %u vs %u]\n", size, (uint16_t)sizeof(control_debug_log_t));
+    return false;
+  }
+  const control_debug_log_t *log = (const control_debug_log_t *)data;
+  if (print_labels) {
     printf("t,target_linear_speed,ideal_linear_speed,measured_linear_speed,left_measured_linear_speed,right_measured_linear_speed,ideal_angular_speed,measured_angular_speed,pwm_left,pwm_right,angular_voltage,line_offset,battery_voltage\n");
   }
 
@@ -853,6 +916,21 @@ static bool sram_print_odometry_log(bool print_labels, const void *data, uint16_
   }
   const odometry_log_t *log = (const odometry_log_t *)data;
   if (print_labels) {
+    printf("t,pos_x,pos_y,angle,linear_speed,angular_speed,line_offset,slip\n");
+  }
+
+  printf("%ld,%.2f,%.2f,%.2f,%.2f,%.3f,%ld,%d\n", log->timestamp_ms, log->position_x, log->position_y,
+         log->angle, log->linear_speed, log->angular_speed, (long)log->line_offset, (int)log->slip);
+  return true;
+}
+
+static bool sram_print_odometry_debug_log(bool print_labels, const void *data, uint16_t size) {
+  if (size != sizeof(odometry_debug_log_t)) {
+    printf("ERROR  [odometry debug size mismatch %u vs %u]\n", size, (uint16_t)sizeof(odometry_debug_log_t));
+    return false;
+  }
+  const odometry_debug_log_t *log = (const odometry_debug_log_t *)data;
+  if (print_labels) {
     printf("t,left_speed,right_speed,angular_speed,left_mm,right_mm,pos_x,pos_y,angle,linear_speed,encoder_omega,encoder_v,gyro_rate,gyro_bias,slip,dt,line_offset,var_x,var_y,var_theta\n");
   }
 
@@ -864,12 +942,37 @@ static bool sram_print_odometry_log(bool print_labels, const void *data, uint16_
   return true;
 }
 
-static bool sram_print_yaw_step_log(bool print_labels, const void *data, uint16_t size) {
-  if (size != sizeof(yaw_step_log_t)) {
-    printf("ERROR  [yawstep size mismatch %u vs %u]\n", size, (uint16_t)sizeof(yaw_step_log_t));
+static const char *const log_macroarray_labels[] = LOG_MACROARRAY_LABELS;
+typedef char sram_static_assert_log_macroarray_labels
+    [((sizeof(log_macroarray_labels) / sizeof(log_macroarray_labels[0])) == LOG_MACROARRAY_FIELDS) ? 1 : -1];
+
+static bool sram_print_log_macroarray(bool print_labels, const void *data, uint16_t size) {
+  if (size != sizeof(log_macroarray_t)) {
+    printf("ERROR  [log_macroarray size mismatch %u vs %u]\n", size, (uint16_t)sizeof(log_macroarray_t));
     return false;
   }
-  const yaw_step_log_t *log = (const yaw_step_log_t *)data;
+  const log_macroarray_t *log = (const log_macroarray_t *)data;
+  if (print_labels) {
+    printf("t");
+    for (uint8_t i = 0; i < LOG_MACROARRAY_FIELDS; i++) {
+      printf(",%s", log_macroarray_labels[i]);
+    }
+    printf("\n");
+  }
+  printf("%ld", (long)log->timestamp_ms);
+  for (uint8_t i = 0; i < LOG_MACROARRAY_FIELDS; i++) {
+    printf(",%ld", (long)log->field[i]);
+  }
+  printf("\n");
+  return true;
+}
+
+static bool sram_print_yaw_step_debug_log(bool print_labels, const void *data, uint16_t size) {
+  if (size != sizeof(yaw_step_debug_log_t)) {
+    printf("ERROR  [yawstep debug size mismatch %u vs %u]\n", size, (uint16_t)sizeof(yaw_step_debug_log_t));
+    return false;
+  }
+  const yaw_step_debug_log_t *log = (const yaw_step_debug_log_t *)data;
   if (print_labels) {
     printf("t,rep,pwm,gyro_rate\n");
   }
@@ -905,11 +1008,20 @@ void sram_print_logs(sram_record_type_t type) {
       case SRAM_TYPE_CONTROL:
         printed = sram_print_control_log(print_labels, &buffer.control, stored_size);
         break;
+      case SRAM_TYPE_CONTROL_DEBUG:
+        printed = sram_print_control_debug_log(print_labels, &buffer.control_debug, stored_size);
+        break;
       case SRAM_TYPE_ODOMETRY:
         printed = sram_print_odometry_log(print_labels, &buffer.odometry, stored_size);
         break;
-      case SRAM_TYPE_YAW_STEP:
-        printed = sram_print_yaw_step_log(print_labels, &buffer.yaw_step, stored_size);
+      case SRAM_TYPE_ODOMETRY_DEBUG:
+        printed = sram_print_odometry_debug_log(print_labels, &buffer.odometry_debug, stored_size);
+        break;
+      case SRAM_TYPE_YAW_STEP_DEBUG:
+        printed = sram_print_yaw_step_debug_log(print_labels, &buffer.yaw_step_debug, stored_size);
+        break;
+      case SRAM_TYPE_LOG_MACROARRAY:
+        printed = sram_print_log_macroarray(print_labels, &buffer.log_macroarray, stored_size);
         break;
       default:
         printf("ERROR  [unknown type 0x%02X, %u bytes]\n", rec_type, stored_size);

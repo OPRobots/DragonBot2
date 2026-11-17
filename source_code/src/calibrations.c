@@ -122,46 +122,44 @@ static void calibrate_wheel_scale(void) {
  * Con el control pausado y el robot quieto (v=0), aplica un escalón de comando
  * diferencial (set_motors_pwm(+D, -D)) y muestrea el gyro a 1 kHz. Sirve para
  * identificar la dinámica comando -> velocidad de guiñada (G_motor: ganancia K y
- * constante de tiempo tau). Guarda las muestras en SRAM (tipo SRAM_TYPE_YAW_STEP)
+ * constante de tiempo tau). Guarda las muestras en SRAM (tipo SRAM_TYPE_YAW_STEP_DEBUG)
  * para volcarlas después con el robot parado.
  */
-#define YAW_STEP_PWM 100     /* magnitud del escalón diferencial (0..1049) */
-#define YAW_STEP_BASELINE 50 /* muestras (ms) antes del escalón */
-#define YAW_STEP_SAMPLES 400 /* muestras (ms) totales por repetición */
-#define YAW_STEP_REPS 3
+#define YAW_STEP_DEBUG_PWM 100     /* magnitud del escalón diferencial (0..1049) */
+#define YAW_STEP_DEBUG_BASELINE 50 /* muestras (ms) antes del escalón */
+#define YAW_STEP_DEBUG_SAMPLES 400 /* muestras (ms) totales por repetición */
+#define YAW_STEP_DEBUG_REPS 3
 
 static void calibrate_yaw_step(void) {
-  yaw_step_log_t rec;
+  yaw_step_debug_log_t rec = {0};
 
   set_control_paused(true);
   set_RGB_color(0, 125, 0);
 
-  for (int rep = 0; rep < YAW_STEP_REPS; rep++) {
+  for (int rep = 0; rep < YAW_STEP_DEBUG_REPS; rep++) {
     uint32_t last = get_clock_ticks();
 
     /* Base (motores parados) */
-    for (int i = 0; i < YAW_STEP_BASELINE; i++) {
+    for (int i = 0; i < YAW_STEP_DEBUG_BASELINE; i++) {
       while (get_clock_ticks() == last) {
       }
       last = get_clock_ticks();
-      rec.timestamp_ms = last;
       rec.rep = (uint16_t)rep;
       rec.pwm = 0;
       rec.gyro_rate = lsm6dsr_get_gyro_z_radps();
-      sram_log(SRAM_TYPE_YAW_STEP, &rec, sizeof(rec));
+      sram_log(SRAM_TYPE_YAW_STEP_DEBUG, &rec, sizeof(rec));
     }
 
     /* Escalón de comando -> giro en el sitio */
-    set_motors_pwm(YAW_STEP_PWM, -YAW_STEP_PWM);
-    for (int i = YAW_STEP_BASELINE; i < YAW_STEP_SAMPLES; i++) {
+    set_motors_pwm(YAW_STEP_DEBUG_PWM, -YAW_STEP_DEBUG_PWM);
+    for (int i = YAW_STEP_DEBUG_BASELINE; i < YAW_STEP_DEBUG_SAMPLES; i++) {
       while (get_clock_ticks() == last) {
       }
       last = get_clock_ticks();
-      rec.timestamp_ms = last;
       rec.rep = (uint16_t)rep;
-      rec.pwm = YAW_STEP_PWM;
+      rec.pwm = YAW_STEP_DEBUG_PWM;
       rec.gyro_rate = lsm6dsr_get_gyro_z_radps();
-      sram_log(SRAM_TYPE_YAW_STEP, &rec, sizeof(rec));
+      sram_log(SRAM_TYPE_YAW_STEP_DEBUG, &rec, sizeof(rec));
     }
     set_motors_speed(0, 0);
     set_motors_brake();
@@ -175,7 +173,7 @@ static void calibrate_yaw_step(void) {
     set_RGB_rainbow();
   }
 
-  sram_print_logs(SRAM_TYPE_YAW_STEP);
+  sram_print_logs(SRAM_TYPE_YAW_STEP_DEBUG);
 
   set_RGB_color(0, 0, 0);
   set_control_paused(false);

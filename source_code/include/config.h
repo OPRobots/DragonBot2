@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -61,20 +62,30 @@ enum ROBOT_VERSION {
 #define START_MS_DELAY_RUN 5000
 #define START_MS_DELAY_DEBUG 2000
 
+/** Perfil de logs:
+ *  LOG_DEBUG_ENABLED = 0: carrera. Control y odometría ligeros, ambos cada LOG_DISTANCE_MM_NORMAL.
+ *  LOG_DEBUG_ENABLED = 1: debug. Control completo a 1 kHz y odometría completa cada LOG_DISTANCE_MM_DEBUG.
+ */
+#define LOG_DEBUG_ENABLED 0
+#define LOG_DISTANCE_MM_NORMAL 10
+#define LOG_DISTANCE_MM_DEBUG 5
+
+#define WHEEL_SCALE_DATA_LENGTH 1
+#define WHEELS_SEPARATION_DATA_LENGTH 1
+
 void handle_robot_version(void);
-void set_all_configs(void);
-uint16_t get_config_run(void);
 
 uint16_t get_offtrack_time(void);
 uint16_t get_start_millis(void);
 
-#define WHEEL_SCALE_DATA_LENGTH 1
-#define WHEELS_SEPARATION_DATA_LENGTH 1
+bool is_log_debug_enabled(void);
+int32_t get_log_distance_mm(void);
 
 float get_micrometers_per_tick(void);
 float get_wheels_separation(void);
 void config_set_micrometers_per_tick(float value);
 void config_set_wheels_separation(float value);
+
 void config_load_eeprom(void);
 
 #endif

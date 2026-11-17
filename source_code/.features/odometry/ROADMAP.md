@@ -355,8 +355,21 @@ seguimiento de trayectoria. Ver §5 para la estrategia de filtrado.
 - [x] F4.4 **Script de análisis** `tools/parse_odometry_log.py`: parsea el volcado del log SRAM, imprime
       resumen (duración, distancia, cierre, integral gyro vs encoder, slip, bias, varianzas) y grafica
       trayectoria/rumbo/velocidades. Exporta CSV opcional.
-- [x] **Modo debug en vivo** de odometría (`DEBUG_TYPE_ODOMETRY`, menú → DEBUG, solo banco con cable):
-      imprime `x,y,θ,v,ω,gyro,enc_w,bias,slip,dt,var_*` cada 50 ms.
+- [x] **Log de uso habitual y log de depuración separados**:
+      - `SRAM_TYPE_ODOMETRY` (ligero, 29 B): `t`, `pos_x`, `pos_y`, `angle`, `linear_speed`,
+        `angular_speed`, `line_offset`, `slip`. Se emite cada `LOG_DISTANCE_MM` (10 mm en el
+        perfil normal) para poder guardar una carrera completa.
+      - `SRAM_TYPE_ODOMETRY_DEBUG` (completo, 77 B): los 20 campos del EKF, muestreado cada
+        `LOG_DISTANCE_MM` (5 mm en el perfil debug).
+      - `SRAM_TYPE_CONTROL` (ligero, 28 B) se emite en el mismo punto que la odometría ligera.
+        `SRAM_TYPE_CONTROL_DEBUG` (completo, 44 B) se mantiene a 1 kHz, porque los análisis de
+        PID, EMA y espectro son temporales.
+      - `LOG_DEBUG_ENABLED` en `include/config.h` selecciona el perfil (0 = carrera, 1 = debug)
+        y `LOG_DISTANCE_MM` fija el paso espacial.
+      - El ítem 1 del menú DEBUG vuelca los cuatro tipos; los scripts detectan el bloque por su
+        cabecera e ignoran los que no correspondan.
+- [x] ~~**Modo debug en vivo** de odometría (`DEBUG_TYPE_ODOMETRY` cada 50 ms)~~ **eliminado**: se usa
+      el volcado SRAM y `tools/parse_odometry_log.py`.
 - [ ] F4.3 Rutina de ensayos: recta, cuadrado, círculo, "8", deriva estacionaria, derrape ← **pendiente (usuario)**.
 - [ ] F4.6 Documentar resultado de cada ensayo (tabla de errores) en este ROADMAP ← **pendiente**.
 

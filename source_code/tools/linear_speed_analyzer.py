@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Analizador del lazo de velocidad lineal del DragonBot2.
 
-Lee el volcado del log de control (SRAM_TYPE_CONTROL; menu -> DEBUG) y estudia
-la cadena encoder -> PI de velocidad -> PWM, con foco en:
+Lee el volcado del log de control completo (SRAM_TYPE_CONTROL_DEBUG; menu ->
+DEBUG con LOG_DEBUG_ENABLED=1) y estudia la cadena encoder -> PI de velocidad
+-> PWM, con foco en:
 
   1. Regimen permanente: error, rizado de la velocidad medida y tension de
      comando (a partir de pwm_avg = (pwm_left + pwm_right)/2, que cancela la
@@ -115,9 +116,26 @@ def voltage(pwm_avg, battery):
 # ---------------------------------------------------------------------------
 
 def _control_header(line):
-    """Devuelve las columnas si @line es una cabecera del log de control."""
+    """Devuelve las columnas si @line es una cabecera del log de control completo."""
     cols = [c.strip() for c in line.split(",")]
-    return cols if cols and cols[0] == "t" and "ideal_linear_speed" in cols else None
+    if not cols or cols[0] != "t":
+        return None
+    if "ideal_linear_speed" in cols and all(req in cols for req in REQUIRED):
+        return cols
+    return None
+
+
+def _is_any_header(line):
+    """True si la linea parece una cabecera CSV (empieza por 't')."""
+    cols = [c.strip() for c in line.split(",")]
+    return bool(cols and cols[0] == "t")
+
+
+def _is_slim_control_header(line):
+    """True si la linea es la cabecera del log de control ligero."""
+    cols = [c.strip() for c in line.split(",")]
+    return bool(cols and cols[0] == "t" and "ideal_linear_speed" in cols
+                and "pwm_left" not in cols)
 
 
 def _parse_key_value(line):
@@ -139,18 +157,28 @@ def read_control_records(path):
 
     Acepta el formato CSV actual (cabecera con los nombres de columna al inicio
     de cada bloque y despues lineas de valores) y el formato antiguo, que
-    repetia `clave=valor` en cada linea.
+    repetia `clave=valor` en cada linea. Solo procesa el log de control completo
+    (SRAM_TYPE_CONTROL_DEBUG); los bloques de control ligero y de odometria se
+    ignoran.
     """
     recs = []
     header = None
+    saw_slim = False
     for raw in open(path, errors="replace"):
         s = raw.strip()
         if not s:
             continue
 
-        cols = _control_header(s)
-        if cols is not None:
-            header = cols
+        if _is_any_header(s):
+            cols = _control_header(s)
+            if cols is not None:
+                header = cols
+            else:
+                # Cualquier otra cabecera (control ligero, odometria, yaw_step debug)
+                # cierra el bloque de control completo.
+                header = None
+                if _is_slim_control_header(s):
+                    saw_slim = True
             continue
 
         if "=" in s:
@@ -170,6 +198,10 @@ def read_control_records(path):
             recs.append(rec)
 
     if not recs:
+        if saw_slim:
+            raise SystemExit(f"[{os.path.basename(path)}] solo contiene el log de control "
+                             "ligero; para este analisis usa un volcado del perfil debug "
+                             "(LOG_DEBUG_ENABLED=1, SRAM_TYPE_CONTROL_DEBUG)")
         raise SystemExit(f"[{os.path.basename(path)}] no contiene registros de control")
 
     segments = []

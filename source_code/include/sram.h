@@ -40,11 +40,29 @@ enum {
   SRAM_TYPE_ANY = 0x00,
   SRAM_TYPE_CONTROL = 0x01,
   SRAM_TYPE_ODOMETRY = 0x02,
-  SRAM_TYPE_YAW_STEP = 0x03,
-  /* ── USER TYPES (0x03 – 0xFE) ── */
+  SRAM_TYPE_YAW_STEP_DEBUG = 0x03,
+  SRAM_TYPE_ODOMETRY_DEBUG = 0x04,
+  SRAM_TYPE_CONTROL_DEBUG = 0x05,
+  SRAM_TYPE_LOG_MACROARRAY = 0x06,
+  /* ── USER TYPES (0x07 – 0xFE) ── */
   SRAM_TYPE_INVALID = 0xFE,
 };
 
+/* Todos los structs de log empiezan por timestamp_ms; sram_log lo rellena. */
+
+/* Log de control ligero: setpoints, medida y estado básico. */
+typedef struct __attribute__((packed)) {
+  uint32_t timestamp_ms;
+  int16_t target_linear_speed;
+  int16_t ideal_linear_speed;
+  float measured_linear_speed;
+  float ideal_angular_speed;
+  float measured_angular_speed;
+  int32_t line_offset;
+  float battery_voltage;
+} control_log_t;
+
+/* Log de control completo: añade ruedas, PWM y tensión angular. */
 typedef struct __attribute__((packed)) {
   uint32_t timestamp_ms;
   int16_t target_linear_speed;
@@ -59,8 +77,21 @@ typedef struct __attribute__((packed)) {
   float angular_voltage;
   int32_t line_offset;
   float battery_voltage;
-} control_log_t;
+} control_debug_log_t;
 
+/* Log de odometría ligero: posición, rumbo y estado básico. */
+typedef struct __attribute__((packed)) {
+  uint32_t timestamp_ms;
+  float position_x;
+  float position_y;
+  float angle;
+  float linear_speed;
+  float angular_speed;
+  int32_t line_offset;
+  uint8_t slip;
+} odometry_log_t;
+
+/* Log de odometría completo: fusión, encoders, gyro, bias, dt y varianzas. */
 typedef struct __attribute__((packed)) {
   uint32_t timestamp_ms;
   float left_measured_linear_speed;
@@ -82,15 +113,46 @@ typedef struct __attribute__((packed)) {
   float var_x;
   float var_y;
   float var_theta;
-} odometry_log_t;
+} odometry_debug_log_t;
 
 /* Test T1 (escalón de guiñada en el sitio): una muestra por ms. */
 typedef struct __attribute__((packed)) {
   uint32_t timestamp_ms;
   uint16_t rep;
-  int16_t pwm; /* 0 en la base, YAW_STEP_PWM durante el escalón */
+  int16_t pwm; /* 0 en la base, YAW_STEP_DEBUG_PWM durante el escalón */
   float gyro_rate;
-} yaw_step_log_t;
+} yaw_step_debug_log_t;
+
+/**
+ * Log comodín. Renombrar field1..field4 y LOG_MACROARRAY_LABELS al usarlo.
+ * Si se añaden o quitan campos, actualizar LOG_MACROARRAY_FIELDS, el struct
+ * anónimo y las etiquetas; los static_assert de sram.c validan el tamaño.
+ * Evitar nombres reservados por otros logs: pos_x, pos_y, angle,
+ * ideal_linear_speed, pwm_left, pwm_right, etc.
+ *
+ * Ejemplo:
+ *   log_macroarray_t log = {
+ *       .field1 = 123,
+ *       .field2 = -45,
+ *       .field3 = 500,
+ *       .field4 = 480,
+ *   };
+ *   sram_log(SRAM_TYPE_LOG_MACROARRAY, &log, sizeof(log));
+ */
+#define LOG_MACROARRAY_FIELDS 4
+#define LOG_MACROARRAY_LABELS {"field1", "field2", "field3", "field4"}
+typedef struct __attribute__((packed)) {
+  uint32_t timestamp_ms;
+  union {
+    struct {
+      int32_t field1;
+      int32_t field2;
+      int32_t field3;
+      int32_t field4;
+    };
+    int32_t field[LOG_MACROARRAY_FIELDS];
+  };
+} log_macroarray_t;
 
 /*
  * Buffer de interpretación de registros SRAM.
@@ -100,7 +162,10 @@ typedef struct __attribute__((packed)) {
 typedef union {
   control_log_t control;
   odometry_log_t odometry;
-  yaw_step_log_t yaw_step;
+  control_debug_log_t control_debug;
+  odometry_debug_log_t odometry_debug;
+  yaw_step_debug_log_t yaw_step_debug;
+  log_macroarray_t log_macroarray;
 } sram_log_t;
 
 typedef enum {
@@ -132,7 +197,17 @@ uint16_t sram_get_total_records(void);
 uint16_t sram_count_records(sram_record_type_t type);
 char *sram_free_bytes(void);
 
+/**
+ * @brief Encola un registro de log.
+ *
+ * El payload debe empezar por un `uint32_t timestamp_ms`. sram_log lo rellena
+ * automáticamente con get_log_timestamp(); el valor que traiga @p data en esos
+ * primeros 4 bytes se ignora.
+ *
+ * @return true si se ha encolado el registro.
+ */
 bool sram_log(sram_record_type_t type, const void *data, uint16_t size);
+
 uint16_t sram_log_pending(void);
 uint16_t sram_log_dropped(void);
 

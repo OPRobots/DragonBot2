@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Analizador y predictor de ganancias del lazo de linea del DragonBot2.
 
-Lee el volcado del log de control (SRAM_TYPE_CONTROL; menu -> DEBUG) y:
+Lee el volcado del log de control completo (SRAM_TYPE_CONTROL_DEBUG; menu ->
+DEBUG con LOG_DEBUG_ENABLED=1) y:
 
   1. Recupera las ganancias kp/ki/kd que produjeron la run (regresion exacta,
      porque el firmware calcula u = kp*e + ki*sum(e) + kd*(e - e_{k-1})).
@@ -177,9 +178,26 @@ def band_rms(x, fs, band, kind):
 # ---------------------------------------------------------------------------
 
 def _control_header(line):
-    """Devuelve las columnas si @line es una cabecera del log de control."""
+    """Devuelve las columnas si @line es una cabecera del log de control completo."""
     cols = [c.strip() for c in line.split(",")]
-    return cols if cols and cols[0] == "t" and "ideal_linear_speed" in cols else None
+    if not cols or cols[0] != "t":
+        return None
+    if all(req in cols for req in ("ideal_linear_speed", "pwm_left", "pwm_right")):
+        return cols
+    return None
+
+
+def _is_any_header(line):
+    """True si la linea parece una cabecera CSV (empieza por 't')."""
+    cols = [c.strip() for c in line.split(",")]
+    return bool(cols and cols[0] == "t")
+
+
+def _is_slim_control_header(line):
+    """True si la linea es la cabecera del log de control ligero."""
+    cols = [c.strip() for c in line.split(",")]
+    return bool(cols and cols[0] == "t" and "ideal_linear_speed" in cols
+                and "pwm_left" not in cols)
 
 
 def _parse_key_value(line):
@@ -201,18 +219,26 @@ def read_control_records(path):
 
     Acepta el formato CSV actual (cabecera con los nombres de columna al inicio
     de cada bloque y despues lineas de valores) y el formato antiguo, que
-    repetia `clave=valor` en cada linea.
+    repetia `clave=valor` en cada linea. Solo procesa el log de control completo
+    (SRAM_TYPE_CONTROL_DEBUG); los bloques de control ligero y de odometria se
+    ignoran.
     """
     recs = []
     header = None
+    saw_slim = False
     for raw in open(path, errors="replace"):
         s = raw.strip()
         if not s:
             continue
 
-        cols = _control_header(s)
-        if cols is not None:
-            header = cols
+        if _is_any_header(s):
+            cols = _control_header(s)
+            if cols is not None:
+                header = cols
+            else:
+                header = None
+                if _is_slim_control_header(s):
+                    saw_slim = True
             continue
 
         if "=" in s:
@@ -232,6 +258,10 @@ def read_control_records(path):
             recs.append(rec)
 
     if not recs:
+        if saw_slim:
+            raise SystemExit(f"[{os.path.basename(path)}] solo contiene el log de control "
+                             "ligero; para este analisis usa un volcado del perfil debug "
+                             "(LOG_DEBUG_ENABLED=1, SRAM_TYPE_CONTROL_DEBUG)")
         raise SystemExit(f"[{os.path.basename(path)}] no contiene registros de control")
 
     # Segmenta por saltos de tiempo (offset, reinicio, concatenaciones).

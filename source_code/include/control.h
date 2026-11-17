@@ -13,7 +13,6 @@
 #include "constants.h"
 #include "debug.h"
 #include "kinematics.h"
-#include "macroarray.h"
 #include "menu.h"
 #include "odometry.h"
 

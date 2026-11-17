@@ -8,7 +8,6 @@
 #include "control.h"
 #include "delay.h"
 #include "encoders.h"
-#include "macroarray.h"
 #include "motors.h"
 #include "odometry.h"
 #include "sensors.h"
@@ -17,7 +16,7 @@
 
 
 #define DEBUG_NONE 0
-#define DEBUG_MACROARRAY 1
+#define DEBUG_SRAM 1
 #define DEBUG_TYPE_SENSORS_RAW 2
 #define DEBUG_TYPE_SENSORS_CALIBRATED 3
 #define DEBUG_TYPE_LINE_POSITION 4
@@ -26,8 +25,6 @@
 #define DEBUG_TYPE_CORRECCION_POSICION 7
 #define DEBUG_TYPE_LEDS_PARTY 8
 #define DEBUG_TYPE_FANS_DEMO 9
-#define DEBUG_TYPE_ODOMETRY 10
-#define DEBUG_TYPE_SRAM_TEST 10
 
 bool is_debug_enabled(void);
 void debug_from_config(uint8_t type);

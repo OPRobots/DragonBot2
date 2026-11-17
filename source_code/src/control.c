@@ -16,6 +16,9 @@ static volatile int32_t target_fan_speed = 0;
 static volatile float ideal_fan_speed = 0;
 static volatile float fan_speed_accel = 0;
 
+static volatile float linear_voltage;
+static volatile float angular_voltage;
+
 static volatile float linear_error;
 static volatile float sum_linear_error;
 static volatile float last_linear_error;
@@ -35,6 +38,16 @@ static volatile float voltage_left;
 static volatile float voltage_right;
 static volatile int16_t pwm_left;
 static volatile int16_t pwm_right;
+
+/* Trigger de logs por distancia (uno por log para que cada funcion decida). */
+typedef struct {
+  int32_t last_mm;
+  int32_t acc_mm;
+  bool armed;
+} log_trigger_t;
+
+static log_trigger_t control_log_trigger;
+static log_trigger_t odometry_log_trigger;
 
 /**
  * @brief Convierte un valor de voltaje dado a su correspondiente PWM
@@ -94,6 +107,192 @@ static float get_measured_linear_speed(void) {
 
 static float get_measured_angular_speed(void) {
   return lsm6dsr_get_gyro_z_radps();
+}
+
+/* ── Logs ligeros (perfil de carrera) ───────────────────────────────────── */
+
+static void log_control_sample(void) {
+  control_log_t log = {
+      .target_linear_speed = (int16_t)target_linear_speed,
+      .ideal_linear_speed = (int16_t)ideal_linear_speed,
+      .measured_linear_speed = get_measured_linear_speed(),
+      .ideal_angular_speed = ideal_angular_speed,
+      .measured_angular_speed = get_measured_angular_speed(),
+      .line_offset = get_line_sensor_position(),
+      .battery_voltage = get_battery_voltage(),
+  };
+  sram_log(SRAM_TYPE_CONTROL, &log, sizeof(log));
+}
+
+static void log_odometry_sample(void) {
+  odometry_log_t log = {
+      .position_x = odometry_get_x(),
+      .position_y = odometry_get_y(),
+      .angle = odometry_get_theta_deg(),
+      .linear_speed = odometry_get_linear_speed(),
+      .angular_speed = odometry_get_angular_speed(),
+      .line_offset = get_line_sensor_position(),
+      .slip = odometry_get_slip() ? 1 : 0,
+  };
+  sram_log(SRAM_TYPE_ODOMETRY, &log, sizeof(log));
+}
+
+/* ── Logs completos (perfil de depuración) ──────────────────────────────── */
+
+static void log_control_debug_sample(void) {
+  control_debug_log_t log = {
+      .target_linear_speed = (int16_t)target_linear_speed,
+      .ideal_linear_speed = (int16_t)ideal_linear_speed,
+      .measured_linear_speed = get_measured_linear_speed(),
+      .left_measured_linear_speed = get_encoder_left_speed(),
+      .right_measured_linear_speed = get_encoder_right_speed(),
+      .ideal_angular_speed = ideal_angular_speed,
+      .measured_angular_speed = get_measured_angular_speed(),
+      .pwm_left = pwm_left,
+      .pwm_right = pwm_right,
+      .angular_voltage = angular_voltage,
+      .line_offset = get_line_sensor_position(),
+      .battery_voltage = get_battery_voltage(),
+  };
+  sram_log(SRAM_TYPE_CONTROL_DEBUG, &log, sizeof(log));
+}
+
+static void log_odometry_debug_sample(void) {
+  odometry_debug_log_t log = {
+      .left_measured_linear_speed = get_encoder_left_speed(),
+      .right_measured_linear_speed = get_encoder_right_speed(),
+      .measured_angular_speed = get_measured_angular_speed(),
+      .left_millimeters = get_encoder_left_millimeters(),
+      .right_millimeters = get_encoder_right_millimeters(),
+      .position_x = odometry_get_x(),
+      .position_y = odometry_get_y(),
+      .angle = odometry_get_theta_deg(),
+      .linear_speed = odometry_get_linear_speed(),
+      .encoder_omega = odometry_get_encoder_omega(),
+      .encoder_v = odometry_get_encoder_v(),
+      .gyro_rate = lsm6dsr_get_gyro_z_radps(),
+      .gyro_bias = odometry_get_gyro_bias(),
+      .slip = odometry_get_slip() ? 1 : 0,
+      .dt = odometry_get_dt(),
+      .line_offset = get_line_sensor_position(),
+      .var_x = odometry_get_var_x(),
+      .var_y = odometry_get_var_y(),
+      .var_theta = odometry_get_var_theta(),
+  };
+  sram_log(SRAM_TYPE_ODOMETRY_DEBUG, &log, sizeof(log));
+}
+
+/**
+ * @brief Comprueba si hay movimiento real en el robot
+ *
+ * @return true
+ * @return false
+ */
+static bool log_is_moving(void) {
+  return (ideal_linear_speed != 0) || (ideal_angular_speed != 0);
+}
+
+/**
+ * @brief Reinicia el trigger; la primera actualización emitirá en el origen.
+ *
+ * @param trigger
+ * @param distance_mm
+ */
+static void log_trigger_reset(log_trigger_t *trigger, int32_t distance_mm) {
+  trigger->last_mm = 0;
+  trigger->acc_mm = distance_mm;
+  trigger->armed = false;
+}
+
+/**
+ * @brief Actualiza el trigger por distancia. Devuelve true si toca emitir.
+ *
+ * Se arma en el primer ciclo con comando de movimiento, que es el origen real
+ * de la pista (no durante el retardo de arranque). Resta el umbral al emitir
+ * para no acumular error de redondeo.
+ *
+ * @param trigger
+ * @param now_mm
+ * @param distance_mm
+ * @return true
+ * @return false
+ */
+static bool log_trigger_update(log_trigger_t *trigger, int32_t now_mm, int32_t distance_mm) {
+  if (!trigger->armed) {
+    if (!log_is_moving()) {
+      return false;
+    }
+    trigger->armed = true;
+    trigger->last_mm = now_mm;
+    trigger->acc_mm = distance_mm;
+  }
+
+  int32_t delta = now_mm - trigger->last_mm;
+  trigger->last_mm = now_mm;
+  trigger->acc_mm += (delta < 0) ? -delta : delta;
+
+  if (trigger->acc_mm < distance_mm) {
+    return false;
+  }
+  trigger->acc_mm -= distance_mm;
+  return true;
+}
+
+/**
+ * @brief  Decide y emite el log de control según el perfil.
+ *
+ * Normal: por distancia, en el mismo punto que la odometría.
+ * Debug: cada ciclo de control mientras haya comando de movimiento.
+ *
+ * @return true
+ * @return false
+ */
+static bool log_control(void) {
+  if (is_log_debug_enabled()) {
+    if (!log_is_moving()) {
+      return false;
+    }
+    log_control_debug_sample();
+    return true;
+  }
+
+  if (!log_trigger_update(&control_log_trigger, get_encoder_avg_millimeters(), get_log_distance_mm())) {
+    return false;
+  }
+  log_control_sample();
+  return true;
+}
+
+/**
+ * @brief Decide y emite el log de odometría por distancia.
+ *
+ * @return true
+ * @return false
+ */
+static bool log_odometry(void) {
+  bool debug = is_log_debug_enabled();
+
+  if (!log_trigger_update(&odometry_log_trigger, get_encoder_avg_millimeters(), get_log_distance_mm())) {
+    return false;
+  }
+
+  if (debug) {
+    log_odometry_debug_sample();
+  } else {
+    log_odometry_sample();
+  }
+  return true;
+}
+
+/**
+ * @brief Reinicia ambos triggers al estado inicial de la pista
+ *
+ */
+static void log_reset(void) {
+  int32_t distance_mm = get_log_distance_mm();
+
+  log_trigger_reset(&control_log_trigger, distance_mm);
+  log_trigger_reset(&odometry_log_trigger, distance_mm);
 }
 
 /**
@@ -181,6 +380,7 @@ void reset_control_all(void) {
   reset_motors_saturated();
   reset_encoders();
   odometry_reset();
+  log_reset();
 }
 
 void set_target_linear_speed(int32_t linear_speed) {
@@ -247,8 +447,8 @@ void control_loop(void) {
   update_fan_speed();
   set_fan_speed(ideal_fan_speed);
 
-  float linear_voltage = 0;
-  float angular_voltage = 0;
+  linear_voltage = 0;
+  angular_voltage = 0;
 
   last_linear_error = linear_error;
   linear_error = ideal_linear_speed - get_measured_linear_speed();
@@ -286,80 +486,8 @@ void control_loop(void) {
   pwm_right = voltage_to_motor_pwm(voltage_right);
   set_motors_pwm(pwm_left, pwm_right);
 
-  if (ideal_linear_speed != 0 || ideal_angular_speed != 0) {
-
-    // static char *labels[] = {
-    //         "target_linear_speed",
-    //         "ideal_linear_speed",
-    //         "measured_linear_speed",
-    //         "measured_left_speed",
-    //         "measured_right_speed",
-    //         "ideal_angular_speed",
-    //         "measured_angular_speed",
-    //         "pwm_left",
-    //         "pwm_right",
-    //         // "encoder_avg_millimeters",
-    //         "sensors_error",
-    //         "battery_voltage"};
-    //     macroarray_store(
-    //         5,
-    //         0b00000110011,
-    //         labels,
-    //         11,
-    //         (int16_t)target_linear_speed,
-    //         (int16_t)ideal_linear_speed,
-    //         (int16_t)(get_measured_linear_speed()),
-    //         (int16_t)(get_encoder_left_speed()),
-    //         (int16_t)(get_encoder_right_speed()),
-    //         (int16_t)(ideal_angular_speed * 100),
-    //         (int16_t)(get_measured_angular_speed() * 100),
-    //         (int16_t)pwm_left,
-    //         (int16_t)pwm_right,
-    //         // (int16_t)get_encoder_avg_millimeters(),
-    //         (int16_t)(line_sensors_error * 100),
-    //         (int16_t)(get_battery_voltage() * 100));
-
-    control_log_t control_log = {
-        .timestamp_ms = get_log_timestamp(),
-        .target_linear_speed = target_linear_speed,
-        .ideal_linear_speed = ideal_linear_speed,
-        .measured_linear_speed = get_measured_linear_speed(),
-        .left_measured_linear_speed = get_encoder_left_speed(),
-        .right_measured_linear_speed = get_encoder_right_speed(),
-        .ideal_angular_speed = ideal_angular_speed,
-        .measured_angular_speed = get_measured_angular_speed(),
-        .pwm_left = pwm_left,
-        .pwm_right = pwm_right,
-        .angular_voltage = angular_voltage,
-        .line_offset = get_line_sensor_position(),
-        .battery_voltage = get_battery_voltage(),
-    };
-    sram_log(SRAM_TYPE_CONTROL, &control_log, sizeof(control_log));
-
-    odometry_log_t odometry_log = {
-        .timestamp_ms = get_log_timestamp(),
-        .left_measured_linear_speed = get_encoder_left_speed(),
-        .right_measured_linear_speed = get_encoder_right_speed(),
-        .measured_angular_speed = get_measured_angular_speed(),
-        .left_millimeters = get_encoder_left_millimeters(),
-        .right_millimeters = get_encoder_right_millimeters(),
-        .position_x = odometry_get_x(),
-        .position_y = odometry_get_y(),
-        .angle = odometry_get_theta_deg(),
-        .linear_speed = odometry_get_linear_speed(),
-        .encoder_omega = odometry_get_encoder_omega(),
-        .encoder_v = odometry_get_encoder_v(),
-        .gyro_rate = lsm6dsr_get_gyro_z_radps(),
-        .gyro_bias = odometry_get_gyro_bias(),
-        .slip = odometry_get_slip() ? 1 : 0,
-        .dt = odometry_get_dt(),
-        .line_offset = get_line_sensor_position(),
-        .var_x = odometry_get_var_x(),
-        .var_y = odometry_get_var_y(),
-        .var_theta = odometry_get_var_theta(),
-    };
-    sram_log(SRAM_TYPE_ODOMETRY, &odometry_log, sizeof(odometry_log));
-  }
+  log_control();
+  log_odometry();
 }
 
 void emergency_stop(void) {
